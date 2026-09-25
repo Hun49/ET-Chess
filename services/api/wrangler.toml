@@ -1,0 +1,9 @@
+name = "et-chess-api"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "et-chess-db"
+database_id = "local-et-chess-db"
