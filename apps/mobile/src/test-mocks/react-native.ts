@@ -132,6 +132,32 @@ export const Platform = {
   select: <T>(objs: { android?: T; default?: T }): T | undefined => objs.android ?? objs.default,
 };
 
+export const NativeModules: Record<string, Record<string, unknown> | undefined> = {};
+
+export interface MockEmitterSubscription {
+  remove: () => void;
+}
+
+export class NativeEventEmitter {
+  private module?: Record<string, unknown>;
+  constructor(module?: Record<string, unknown>) {
+    this.module = module;
+  }
+  addListener(
+    eventName: string,
+    listener: (...args: readonly unknown[]) => unknown,
+  ): MockEmitterSubscription {
+    const fn = this.module?.addListener;
+    if (typeof fn === 'function') {
+      return fn.call(this.module, eventName, listener) as MockEmitterSubscription;
+    }
+    return {
+      remove: () => {},
+    };
+  }
+  removeAllListeners() {}
+}
+
 export default {
   StyleSheet,
   View,
@@ -145,4 +171,6 @@ export default {
   useWindowDimensions,
   Dimensions,
   Platform,
+  NativeModules,
+  NativeEventEmitter,
 };

@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Chessboard from '../src/components/Chessboard';
+import { initNativeBotBridge } from '../src/features/bot/nativeBotBridge';
 import { parseMobileGameParams } from '../src/navigation';
 import { useGameStore } from '../src/store/gameStore';
 import { borderRadius, spacing, themeColors, typography } from '../src/theme';
@@ -48,6 +49,14 @@ export default function GameScreen() {
   // UI state
   const [orientation, setOrientation] = useState<'white' | 'black'>('white');
   const [modalDismissed, setModalDismissed] = useState<boolean>(false);
+
+  // Mount native Stockfish engine bridge on screen mount
+  useEffect(() => {
+    const cleanup = initNativeBotBridge();
+    return () => {
+      cleanup();
+    };
+  }, []);
 
   // Sync mode from navigation params if provided
   useEffect(() => {

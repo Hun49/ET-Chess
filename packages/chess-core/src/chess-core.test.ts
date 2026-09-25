@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import {
   applyMove,
   createGame,
+  findBestMove,
+  getAllLegalMoves,
   getGameStatus,
   getLegalMoves,
   getSanHistory,
@@ -180,5 +182,46 @@ describe('packages/chess-core', () => {
     game = applyMove(game, { from: 'b8', to: 'c6' });
 
     expect(getSanHistory(game)).toEqual(['e4', 'e5', 'Nf3', 'Nc6']);
+  });
+
+  it('getAllLegalMoves returns all 20 legal moves in starting position', () => {
+    const game = createGame();
+    const moves = getAllLegalMoves(game);
+    expect(moves).toHaveLength(20);
+    // Pawns can move 1 or 2 squares
+    expect(moves).toContainEqual({ from: 'e2', to: 'e4', promotion: undefined });
+    expect(moves).toContainEqual({ from: 'e2', to: 'e3', promotion: undefined });
+    // Knights can move
+    expect(moves).toContainEqual({ from: 'g1', to: 'f3', promotion: undefined });
+  });
+
+  it('getAllLegalMoves works with FEN string and returns empty for game over', () => {
+    const stalemateFen = 'k7/8/1Q6/8/8/8/8/7K b - - 0 1';
+    expect(getAllLegalMoves(stalemateFen)).toEqual([]);
+  });
+
+  it('findBestMove finds checkmate in 1 (Scholar’s mate setup)', () => {
+    // White to move: Qh5, Bc4 vs Black e5, Nc6, Nf6
+    // White can play Qxf7#
+    let game = createGame();
+    game = applyMove(game, { from: 'e2', to: 'e4' });
+    game = applyMove(game, { from: 'e7', to: 'e5' });
+    game = applyMove(game, { from: 'd1', to: 'h5' });
+    game = applyMove(game, { from: 'b8', to: 'c6' });
+    game = applyMove(game, { from: 'f1', to: 'c4' });
+    game = applyMove(game, { from: 'g8', to: 'f6' });
+
+    const bestMove = findBestMove(game);
+    expect(bestMove).toEqual({ from: 'h5', to: 'f7', promotion: undefined });
+  });
+
+  it('findBestMove returns null for game-over positions and returns legal move for startpos', () => {
+    const stalemateFen = 'k7/8/1Q6/8/8/8/8/7K b - - 0 1';
+    expect(findBestMove(stalemateFen)).toBeNull();
+
+    const startMove = findBestMove(createGame());
+    expect(startMove).not.toBeNull();
+    expect(startMove?.from).toBeDefined();
+    expect(startMove?.to).toBeDefined();
   });
 });

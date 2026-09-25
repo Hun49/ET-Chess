@@ -3,6 +3,7 @@ import type { EngineBridge } from './bridge';
 import { parseBestMove, UCI } from './uci';
 
 export type { EngineBridge } from './bridge';
+export type { NativeStockfishModule } from './native-worker';
 export { NativeWorkerBridge } from './native-worker';
 export { parseBestMove, UCI } from './uci';
 export { WebWorkerBridge } from './web-worker';
