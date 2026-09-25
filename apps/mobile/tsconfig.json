@@ -1,0 +1,9 @@
+{
+  "extends": "@et-chess/config/tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["DOM", "ESNext"],
+    "noEmit": true
+  },
+  "include": ["app", "src", "*.d.ts", "*.config.ts", "*.config.js"]
+}

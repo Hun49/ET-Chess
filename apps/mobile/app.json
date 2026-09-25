@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "ET Chess",
+    "slug": "et-chess",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "etchess",
+    "android": {
+      "package": "com.etchess.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#121212"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.etchess.app",
+      "supportsTablet": true
+    },
+    "plugins": ["expo-router"]
+  }
+}
