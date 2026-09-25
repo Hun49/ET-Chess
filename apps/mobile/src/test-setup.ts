@@ -1,6 +1,26 @@
 import React from 'react';
 import { vi } from 'vitest';
 
+const storageMap = new Map<string, string>();
+export const mockAsyncStorage = {
+  getItem: vi.fn(async (key: string) => storageMap.get(key) ?? null),
+  setItem: vi.fn(async (key: string, value: string) => {
+    storageMap.set(key, value);
+  }),
+  removeItem: vi.fn(async (key: string) => {
+    storageMap.delete(key);
+  }),
+  clear: vi.fn(async () => {
+    storageMap.clear();
+  }),
+  getAllKeys: vi.fn(async () => Array.from(storageMap.keys())),
+};
+
+vi.mock('@react-native-async-storage/async-storage', () => ({
+  default: mockAsyncStorage,
+  ...mockAsyncStorage,
+}));
+
 vi.mock('react-native-safe-area-context', () => ({
   SafeAreaProvider: ({ children }: { children?: React.ReactNode }) => children,
   SafeAreaView: ({ children }: { children?: React.ReactNode }) => children,
@@ -16,21 +36,27 @@ vi.mock('expo-status-bar', () => ({
 }));
 
 vi.mock('lucide-react-native', () => {
-  const MockIcon = () => React.createElement('svg', null);
+  const MockIcon = (props: Record<string, unknown>) => React.createElement('svg', props);
   return {
+    ActivityIndicator: MockIcon,
+    ArrowLeft: MockIcon,
+    ArrowUpDown: MockIcon,
     Bot: MockIcon,
+    Check: MockIcon,
     ChevronRight: MockIcon,
+    CircleDot: MockIcon,
     Cpu: MockIcon,
+    Eye: MockIcon,
+    Flag: MockIcon,
+    Handshake: MockIcon,
+    Info: MockIcon,
+    RefreshCw: MockIcon,
+    RotateCcw: MockIcon,
     Settings: MockIcon,
     Sparkles: MockIcon,
     Swords: MockIcon,
+    Trophy: MockIcon,
     Users: MockIcon,
-    ArrowLeft: MockIcon,
-    CircleDot: MockIcon,
-    Flag: MockIcon,
-    RotateCcw: MockIcon,
-    Check: MockIcon,
-    Info: MockIcon,
     Volume2: MockIcon,
   };
 });

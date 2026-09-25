@@ -1,17 +1,19 @@
-import type { BotDifficulty } from '@et-chess/types';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Check, Cpu, Info, Volume2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { DIFFICULTY_OPTIONS } from '../src/navigation';
+import { useGameStore } from '../src/store/gameStore';
 import { borderRadius, spacing, themeColors, typography } from '../src/theme';
 
 export default function SettingsScreen() {
   const router = useRouter();
 
-  // Settings state
-  const [selectedDifficulty, setSelectedDifficulty] = useState<BotDifficulty>('intermediate');
+  // Settings state wired to store
+  const selectedDifficulty = useGameStore((state) => state.botDifficulty);
+  const setBotDifficulty = useGameStore((state) => state.setBotDifficulty);
+
   const [moveSounds, setMoveSounds] = useState<boolean>(true);
   const [captureSounds, setCaptureSounds] = useState<boolean>(true);
   const [haptics, setHaptics] = useState<boolean>(true);
@@ -54,7 +56,7 @@ export default function SettingsScreen() {
                     isSelected && styles.tierCardSelected,
                     pressed && styles.buttonPressed,
                   ]}
-                  onPress={() => setSelectedDifficulty(tier.id)}
+                  onPress={() => setBotDifficulty(tier.id)}
                   accessibilityRole="radio"
                   accessibilityState={{ selected: isSelected }}
                   accessibilityLabel={`${tier.title}: ${tier.subtitle}`}
