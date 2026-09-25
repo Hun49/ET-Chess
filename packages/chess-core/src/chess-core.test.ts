@@ -1,6 +1,13 @@
 import { Chess } from 'chess.js';
 import { describe, expect, it } from 'vitest';
-import { applyMove, createGame, getGameStatus, getLegalMoves, isGameOver } from './index';
+import {
+  applyMove,
+  createGame,
+  getGameStatus,
+  getLegalMoves,
+  getSanHistory,
+  isGameOver,
+} from './index';
 
 describe('packages/chess-core', () => {
   it('starts a new game with correct starting FEN, white turn, and ongoing status', () => {
@@ -163,5 +170,15 @@ describe('packages/chess-core', () => {
     // Captured d5 pawn is removed from the board
     const chess = new Chess(afterEp.fen);
     expect(chess.get('d5')).toBeUndefined();
+  });
+
+  it('correctly generates SAN history for played moves', () => {
+    let game = createGame();
+    game = applyMove(game, { from: 'e2', to: 'e4' });
+    game = applyMove(game, { from: 'e7', to: 'e5' });
+    game = applyMove(game, { from: 'g1', to: 'f3' });
+    game = applyMove(game, { from: 'b8', to: 'c6' });
+
+    expect(getSanHistory(game)).toEqual(['e4', 'e5', 'Nf3', 'Nc6']);
   });
 });

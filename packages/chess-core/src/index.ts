@@ -114,3 +114,28 @@ export function isGameOver(state: GameState): boolean {
   const chess = getChessInstance(state);
   return chess.isGameOver();
 }
+
+/**
+ * Returns SAN (Standard Algebraic Notation) strings for all moves played in the game.
+ */
+export function getSanHistory(state: GameState): string[] {
+  const chess = new Chess();
+  const sanMoves: string[] = [];
+  for (const m of state.moveHistory) {
+    try {
+      const result = chess.move({
+        from: m.from,
+        to: m.to,
+        promotion: m.promotion,
+      });
+      if (result) {
+        sanMoves.push(result.san);
+      } else {
+        sanMoves.push(`${m.from}-${m.to}`);
+      }
+    } catch {
+      sanMoves.push(`${m.from}-${m.to}`);
+    }
+  }
+  return sanMoves;
+}

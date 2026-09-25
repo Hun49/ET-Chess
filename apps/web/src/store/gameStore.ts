@@ -31,67 +31,70 @@ export function getEngineBridge(): EngineBridge | null {
   return activeBridge;
 }
 
-export const useGameStore = create<GameStoreState>((set, get) => ({
-  game: createGame(),
-  botDifficulty: 'intermediate',
-  isBotThinking: false,
-  gameMode: 'bot',
+export const useGameStore = create<GameStoreState>((set, get, api) => {
+  api.getInitialState = () => get();
+  return {
+    game: createGame(),
+    botDifficulty: 'intermediate',
+    isBotThinking: false,
+    gameMode: 'bot',
 
-  makeMove: (move: Move): boolean => {
-    try {
-      const nextGame = applyMove(get().game, move);
-      set({ game: nextGame });
-      return true;
-    } catch {
-      return false;
-    }
-  },
-
-  requestBotMove: async (): Promise<void> => {
-    set({ isBotThinking: true });
-    try {
-      if (activeBridge) {
-        const { game, botDifficulty, makeMove } = get();
-        if (!currentBotHandle || currentBotHandle.difficulty !== botDifficulty) {
-          if (currentBotHandle) {
-            currentBotHandle.bot.dispose();
-          }
-          currentBotHandle = {
-            bot: createBot(botDifficulty, activeBridge),
-            difficulty: botDifficulty,
-          };
-        }
-        const bestMove = await currentBotHandle.bot.getBestMove(game.fen);
-        makeMove(bestMove);
-      }
-    } catch {
-      // Gracefully resolve if engine bridge errors or search is stopped
-    } finally {
-      set({ isBotThinking: false });
-    }
-  },
-
-  resetGame: (): void => {
-    if (currentBotHandle) {
+    makeMove: (move: Move): boolean => {
       try {
-        currentBotHandle.bot.stop();
+        const nextGame = applyMove(get().game, move);
+        set({ game: nextGame });
+        return true;
       } catch {
-        // Ignore stop errors on reset
+        return false;
       }
-    }
-    set({
-      game: createGame(),
-      isBotThinking: false,
-    });
-  },
+    },
 
-  setBotDifficulty: (difficulty: BotDifficulty): void => {
-    set({ botDifficulty: difficulty });
-  },
+    requestBotMove: async (): Promise<void> => {
+      set({ isBotThinking: true });
+      try {
+        if (activeBridge) {
+          const { game, botDifficulty, makeMove } = get();
+          if (!currentBotHandle || currentBotHandle.difficulty !== botDifficulty) {
+            if (currentBotHandle) {
+              currentBotHandle.bot.dispose();
+            }
+            currentBotHandle = {
+              bot: createBot(botDifficulty, activeBridge),
+              difficulty: botDifficulty,
+            };
+          }
+          const bestMove = await currentBotHandle.bot.getBestMove(game.fen);
+          makeMove(bestMove);
+        }
+      } catch {
+        // Gracefully resolve if engine bridge errors or search is stopped
+      } finally {
+        set({ isBotThinking: false });
+      }
+    },
 
-  setGameMode: (mode: 'bot' | 'local'): void => {
-    set({ gameMode: mode });
-  },
-}));
+    resetGame: (): void => {
+      if (currentBotHandle) {
+        try {
+          currentBotHandle.bot.stop();
+        } catch {
+          // Ignore stop errors on reset
+        }
+      }
+      set({
+        game: createGame(),
+        isBotThinking: false,
+      });
+    },
+
+    setBotDifficulty: (difficulty: BotDifficulty): void => {
+      set({ botDifficulty: difficulty });
+    },
+
+    setGameMode: (mode: 'bot' | 'local'): void => {
+      set({ gameMode: mode });
+    },
+  };
+});
 
 export default useGameStore;
