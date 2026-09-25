@@ -13,6 +13,7 @@ export interface GameStoreState {
   resetGame: () => void;
   setBotDifficulty: (difficulty: BotDifficulty) => void;
   setGameMode: (mode: 'bot' | 'local') => void;
+  agreeDraw: () => void;
 }
 
 let activeBridge: EngineBridge | null = null;
@@ -93,6 +94,23 @@ export const useGameStore = create<GameStoreState>((set, get, api) => {
 
     setGameMode: (mode: 'bot' | 'local'): void => {
       set({ gameMode: mode });
+    },
+
+    agreeDraw: (): void => {
+      if (currentBotHandle) {
+        try {
+          currentBotHandle.bot.stop();
+        } catch {
+          // Ignore stop errors on draw agreement
+        }
+      }
+      set((state) => ({
+        isBotThinking: false,
+        game: {
+          ...state.game,
+          status: 'draw',
+        },
+      }));
     },
   };
 });

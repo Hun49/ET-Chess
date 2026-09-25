@@ -1,32 +1,89 @@
 import { getSanHistory, isGameOver } from '@et-chess/chess-core';
-import type { PlayerColor } from '@et-chess/types';
+import type { BotDifficulty, PlayerColor } from '@et-chess/types';
 import {
   ArrowUpDown,
   Bot,
   CircleDot,
   Crown,
   Flag,
+  Handshake,
+  Loader2,
   RotateCcw,
   ScrollText,
   Trophy,
   Users,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { ChessboardView } from '../board/ChessboardView';
+import { useStockfishWorker } from '../bot/useStockfishWorker';
+import { playMoveSound } from './soundEffects';
 
 export interface GameViewProps {
   initialMode?: 'bot' | 'local';
 }
+
+export interface DifficultyPreset {
+  id: BotDifficulty;
+  label: string;
+  badge: string;
+  spec: string;
+  description: string;
+}
+
+export const DIFFICULTY_PRESETS_UI: DifficultyPreset[] = [
+  {
+    id: 'beginner',
+    label: 'Beginner',
+    badge: 'Skill 2',
+    spec: 'Depth 5',
+    description: 'Casual play with tactical oversights, perfect for beginners.',
+  },
+  {
+    id: 'intermediate',
+    label: 'Intermediate',
+    badge: 'Skill 10',
+    spec: 'Depth 10',
+    description: 'Club-level play with solid tactics and multi-move calculation.',
+  },
+  {
+    id: 'advanced',
+    label: 'Advanced',
+    badge: 'Skill 15',
+    spec: '1000ms',
+    description: 'Strong competitive play with 1-second search per position.',
+  },
+  {
+    id: 'full-strength',
+    label: 'Full Strength',
+    badge: 'Skill 20',
+    spec: '3000ms',
+    description: 'Maximum WASM engine calculation with 3-second evaluation.',
+  },
+];
+
+export const DEFAULT_DIFFICULTY_PRESET: DifficultyPreset =
+  DIFFICULTY_PRESETS_UI[1] as DifficultyPreset;
 
 interface PlayerCardProps {
   color: PlayerColor;
   isTurn: boolean;
   isGameOver: boolean;
   gameMode: 'bot' | 'local';
+  isBotThinking?: boolean;
+  botDifficulty?: BotDifficulty;
 }
 
-function PlayerCard({ color, isTurn, isGameOver, gameMode }: PlayerCardProps) {
+function PlayerCard({
+  color,
+  isTurn,
+  isGameOver,
+  gameMode,
+  isBotThinking = false,
+  botDifficulty = 'intermediate',
+}: PlayerCardProps) {
   const isWhite = color === 'white';
   const isBot = gameMode === 'bot' && !isWhite;
 
@@ -39,26 +96,36 @@ function PlayerCard({ color, isTurn, isGameOver, gameMode }: PlayerCardProps) {
       : 'Player 2 (Black)';
 
   const active = isTurn && !isGameOver;
+  const currentPreset =
+    DIFFICULTY_PRESETS_UI.find((d) => d.id === botDifficulty) ?? DEFAULT_DIFFICULTY_PRESET;
 
   return (
     <div
       data-testid={`player-card-${color}`}
       className={`w-full max-w-[560px] rounded-xl px-4 py-3 flex items-center justify-between shadow-sm transition-all border ${
         active
-          ? 'bg-surface-card border-emerald-500/50 shadow-emerald-950/20'
+          ? isBot && isBotThinking
+            ? 'bg-surface-card border-emerald-500 shadow-emerald-950/40 ring-1 ring-emerald-500/30'
+            : 'bg-surface-card border-emerald-500/50 shadow-emerald-950/20'
           : 'bg-surface-card border-surface-border'
       }`}
     >
       <div className="flex items-center gap-3">
         <div
-          className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg border ${
-            isWhite
-              ? 'bg-board-light text-surface-base border-board-light/40 shadow-sm'
-              : 'bg-surface-base text-gray-200 border-surface-border'
+          className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-lg border transition-all ${
+            isBot && isBotThinking
+              ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/70 animate-pulse shadow-md'
+              : isWhite
+                ? 'bg-board-light text-surface-base border-board-light/40 shadow-sm'
+                : 'bg-surface-base text-gray-200 border-surface-border'
           }`}
         >
           {isBot ? (
-            <Bot className="w-5 h-5 text-board-light" />
+            isBotThinking ? (
+              <Bot className="w-5 h-5 text-emerald-400 animate-pulse" />
+            ) : (
+              <Bot className="w-5 h-5 text-board-light" />
+            )
           ) : isWhite ? (
             <Crown className="w-5 h-5 text-surface-base" />
           ) : (
@@ -73,34 +140,58 @@ function PlayerCard({ color, isTurn, isGameOver, gameMode }: PlayerCardProps) {
                 WASM
               </span>
             )}
+            {isBot && (
+              <span className="text-[10px] text-gray-400 font-mono">{currentPreset.spec}</span>
+            )}
           </div>
-          <p className="text-xs text-gray-400">
-            {active ? 'Thinking / Turn to move' : 'Waiting for turn'}
-          </p>
+          {isBot && isBotThinking ? (
+            <p
+              data-testid="bot-thinking-text"
+              className="text-xs text-emerald-400 flex items-center gap-1.5 font-medium animate-pulse"
+            >
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>{`Thinking (${currentPreset.spec})...`}</span>
+            </p>
+          ) : (
+            <p className="text-xs text-gray-400">{active ? 'Turn to move' : 'Waiting for turn'}</p>
+          )}
         </div>
       </div>
 
       <div className="flex items-center gap-2.5">
-        <span
-          className={`text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1.5 border ${
-            active
-              ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/40'
-              : 'bg-surface-accent text-gray-400 border-surface-border'
-          }`}
-        >
+        {isBot && isBotThinking ? (
           <span
-            className={`w-2 h-2 rounded-full ${
-              active ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'
+            data-testid="bot-thinking-indicator"
+            className="text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5 bg-emerald-950/60 text-emerald-400 border border-emerald-500/50 animate-pulse shadow-sm"
+          >
+            <Loader2 className="w-3 h-3 animate-spin" />
+            <span>Thinking</span>
+          </span>
+        ) : (
+          <span
+            className={`text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1.5 border ${
+              active
+                ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/40'
+                : 'bg-surface-accent text-gray-400 border-surface-border'
             }`}
-          />
-          <span>{active ? 'Active' : 'Waiting'}</span>
-        </span>
+          >
+            <span
+              className={`w-2 h-2 rounded-full ${
+                active ? 'bg-emerald-400 animate-pulse' : 'bg-gray-500'
+              }`}
+            />
+            <span>{active ? 'Active' : 'Waiting'}</span>
+          </span>
+        )}
       </div>
     </div>
   );
 }
 
 export function GameView({ initialMode }: GameViewProps) {
+  // Automatically initialize Stockfish Web Worker bridge in browser
+  useStockfishWorker();
+
   const game = useGameStore((state) => state.game);
   const storeGameMode = useGameStore((state) => state.gameMode);
   const gameMode = initialMode ?? storeGameMode;
@@ -108,12 +199,18 @@ export function GameView({ initialMode }: GameViewProps) {
   const resetGame = useGameStore((state) => state.resetGame);
   const requestBotMove = useGameStore((state) => state.requestBotMove);
   const isBotThinking = useGameStore((state) => state.isBotThinking);
+  const botDifficulty = useGameStore((state) => state.botDifficulty);
+  const setBotDifficulty = useGameStore((state) => state.setBotDifficulty);
+  const agreeDraw = useGameStore((state) => state.agreeDraw);
 
   const [orientation, setOrientation] = useState<PlayerColor>('white');
   const [resignedColor, setResignedColor] = useState<PlayerColor | null>(null);
   const [showResignConfirm, setShowResignConfirm] = useState(false);
+  const [showDrawConfirm, setShowDrawConfirm] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
 
   const moveListEndRef = useRef<HTMLDivElement>(null);
+  const prevMoveCountRef = useRef(0);
 
   // Sync mode from props if provided
   useEffect(() => {
@@ -128,14 +225,37 @@ export function GameView({ initialMode }: GameViewProps) {
       gameMode === 'bot' &&
       game.turn === 'black' &&
       !isGameOver(game) &&
+      game.status !== 'draw' &&
       !resignedColor &&
       !isBotThinking
     ) {
       void requestBotMove();
     }
-  }, [gameMode, game.turn, game.fen, resignedColor, isBotThinking, game, requestBotMove]);
+  }, [
+    gameMode,
+    game.turn,
+    game.fen,
+    game.status,
+    resignedColor,
+    isBotThinking,
+    game,
+    requestBotMove,
+  ]);
 
   const sanMoves = useMemo(() => getSanHistory(game), [game]);
+
+  // Audio effect upon moves
+  useEffect(() => {
+    if (sanMoves.length > prevMoveCountRef.current) {
+      if (soundEnabled && prevMoveCountRef.current > 0) {
+        const lastMove = sanMoves[sanMoves.length - 1] ?? '';
+        const isCapture =
+          lastMove.includes('x') || lastMove.includes('+') || lastMove.includes('#');
+        playMoveSound(isCapture);
+      }
+    }
+    prevMoveCountRef.current = sanMoves.length;
+  }, [sanMoves, soundEnabled]);
 
   const movePairs = useMemo(() => {
     const pairs: { moveNumber: number; white: string; black?: string }[] = [];
@@ -158,7 +278,7 @@ export function GameView({ initialMode }: GameViewProps) {
     }
   }, [movePairs]);
 
-  const gameOver = isGameOver(game) || resignedColor !== null;
+  const gameOver = isGameOver(game) || game.status === 'draw' || resignedColor !== null;
 
   let outcomeTitle = '';
   let outcomeDescription = '';
@@ -176,13 +296,14 @@ export function GameView({ initialMode }: GameViewProps) {
     outcomeDescription = 'King has no legal moves and is not in check.';
   } else if (game.status === 'draw') {
     outcomeTitle = 'Draw';
-    outcomeDescription = 'Game ended in a draw.';
+    outcomeDescription = 'Game ended in a mutual draw.';
   }
 
   const handleNewGame = () => {
     resetGame();
     setResignedColor(null);
     setShowResignConfirm(false);
+    setShowDrawConfirm(false);
   };
 
   const handleFlipBoard = () => {
@@ -195,7 +316,8 @@ export function GameView({ initialMode }: GameViewProps) {
   };
 
   const confirmResign = () => {
-    setResignedColor(game.turn);
+    const resigningColor = gameMode === 'bot' ? 'white' : game.turn;
+    setResignedColor(resigningColor);
     setShowResignConfirm(false);
   };
 
@@ -203,9 +325,26 @@ export function GameView({ initialMode }: GameViewProps) {
     setShowResignConfirm(false);
   };
 
+  const handleDrawClick = () => {
+    if (gameOver) return;
+    setShowDrawConfirm(true);
+  };
+
+  const confirmDraw = () => {
+    agreeDraw();
+    setShowDrawConfirm(false);
+  };
+
+  const cancelDraw = () => {
+    setShowDrawConfirm(false);
+  };
+
   // Orientation-dependent player ordering
   const topColor: PlayerColor = orientation === 'white' ? 'black' : 'white';
   const bottomColor: PlayerColor = orientation === 'white' ? 'white' : 'black';
+
+  const selectedPreset =
+    DIFFICULTY_PRESETS_UI.find((d) => d.id === botDifficulty) ?? DEFAULT_DIFFICULTY_PRESET;
 
   return (
     <div
@@ -220,6 +359,8 @@ export function GameView({ initialMode }: GameViewProps) {
           isTurn={game.turn === topColor}
           isGameOver={gameOver}
           gameMode={gameMode}
+          isBotThinking={topColor === 'black' && isBotThinking}
+          botDifficulty={botDifficulty}
         />
 
         {/* Board Mount Container */}
@@ -260,11 +401,14 @@ export function GameView({ initialMode }: GameViewProps) {
               </div>
               <h3 className="text-lg font-bold text-white mb-1">Resign Match?</h3>
               <p className="text-xs text-gray-300 max-w-xs mb-4">
-                Are you sure you want to resign? The victory will be awarded to your opponent.
+                {gameMode === 'bot'
+                  ? 'Concede victory to Stockfish. Are you sure you want to resign?'
+                  : `Are you sure ${game.turn === 'white' ? 'White' : 'Black'} wants to resign? Victory will be awarded to your opponent.`}
               </p>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
+                  data-testid="confirm-resign-btn"
                   onClick={confirmResign}
                   className="py-2 px-4 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition cursor-pointer"
                 >
@@ -272,7 +416,46 @@ export function GameView({ initialMode }: GameViewProps) {
                 </button>
                 <button
                   type="button"
+                  data-testid="cancel-resign-btn"
                   onClick={cancelResign}
+                  className="py-2 px-4 rounded-lg bg-surface-accent hover:bg-surface-border text-gray-300 text-xs font-medium transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Draw Confirmation Overlay */}
+          {showDrawConfirm && !gameOver && (
+            <div
+              data-testid="draw-dialog"
+              className="absolute inset-0 bg-surface-base/90 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-40"
+            >
+              <div className="w-12 h-12 rounded-xl bg-amber-950/40 border border-amber-800/40 flex items-center justify-center text-amber-400 mb-3">
+                <Handshake className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white mb-1">
+                {gameMode === 'bot' ? 'Offer Draw to Stockfish?' : 'Mutual Draw Agreement'}
+              </h3>
+              <p className="text-xs text-gray-300 max-w-xs mb-4">
+                {gameMode === 'bot'
+                  ? 'Conclude this match with Stockfish peacefully as a draw.'
+                  : 'Does your opponent agree to end the match with a mutual draw?'}
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  data-testid="confirm-draw-btn"
+                  onClick={confirmDraw}
+                  className="py-2 px-4 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold transition cursor-pointer"
+                >
+                  Accept Draw
+                </button>
+                <button
+                  type="button"
+                  data-testid="cancel-draw-btn"
+                  onClick={cancelDraw}
                   className="py-2 px-4 rounded-lg bg-surface-accent hover:bg-surface-border text-gray-300 text-xs font-medium transition cursor-pointer"
                 >
                   Cancel
@@ -288,10 +471,12 @@ export function GameView({ initialMode }: GameViewProps) {
           isTurn={game.turn === bottomColor}
           isGameOver={gameOver}
           gameMode={gameMode}
+          isBotThinking={bottomColor === 'black' && isBotThinking}
+          botDifficulty={botDifficulty}
         />
       </div>
 
-      {/* Right Column: Game Info, Move History, Controls */}
+      {/* Right Column: Game Info, Difficulty Selector, Move History, Controls */}
       <div className="lg:col-span-4 flex flex-col gap-4 w-full">
         {/* Status Card */}
         <div className="bg-surface-card border border-surface-border rounded-xl p-4 shadow-sm">
@@ -310,17 +495,33 @@ export function GameView({ initialMode }: GameViewProps) {
                 Match Status
               </span>
             </div>
-            <span
-              className={`px-2 py-0.5 rounded text-xs font-medium border ${
-                gameOver
-                  ? 'bg-red-950/40 text-red-300 border-red-800/40'
-                  : game.status === 'check'
-                    ? 'bg-amber-950/40 text-amber-300 border-amber-800/40'
-                    : 'bg-surface-accent text-gray-200 border-surface-border'
-              }`}
-            >
-              {gameOver ? 'Game Over' : game.status === 'check' ? 'Check!' : 'Ongoing'}
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                data-testid="sound-toggle-btn"
+                onClick={() => setSoundEnabled((prev) => !prev)}
+                className="p-1 rounded text-gray-400 hover:text-white hover:bg-surface-accent transition"
+                title={soundEnabled ? 'Mute move sounds' : 'Enable move sounds'}
+                aria-label={soundEnabled ? 'Mute move sounds' : 'Enable move sounds'}
+              >
+                {soundEnabled ? (
+                  <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <VolumeX className="w-3.5 h-3.5 text-gray-500" />
+                )}
+              </button>
+              <span
+                className={`px-2 py-0.5 rounded text-xs font-medium border ${
+                  gameOver
+                    ? 'bg-red-950/40 text-red-300 border-red-800/40'
+                    : game.status === 'check'
+                      ? 'bg-amber-950/40 text-amber-300 border-amber-800/40'
+                      : 'bg-surface-accent text-gray-200 border-surface-border'
+                }`}
+              >
+                {gameOver ? 'Game Over' : game.status === 'check' ? 'Check!' : 'Ongoing'}
+              </span>
+            </div>
           </div>
 
           <div className="mt-3 space-y-2">
@@ -347,6 +548,52 @@ export function GameView({ initialMode }: GameViewProps) {
             </div>
           </div>
         </div>
+
+        {/* Bot Difficulty Selector Card (Visible in Bot Mode) */}
+        {gameMode === 'bot' && (
+          <div
+            data-testid="difficulty-selector"
+            className="bg-surface-card border border-surface-border rounded-xl p-4 shadow-sm"
+          >
+            <div className="flex items-center justify-between pb-2.5 border-b border-surface-border">
+              <div className="flex items-center gap-2">
+                <Bot className="w-4 h-4 text-board-light" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-white">
+                  Bot Difficulty
+                </span>
+              </div>
+              <span className="text-[11px] font-mono text-emerald-400 font-medium">
+                {selectedPreset.spec}
+              </span>
+            </div>
+
+            {/* Clean Tabs / Pill Selector */}
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-surface-base rounded-lg border border-surface-border">
+              {DIFFICULTY_PRESETS_UI.map((preset) => {
+                const isSelected = botDifficulty === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    data-testid={`difficulty-option-${preset.id}`}
+                    onClick={() => setBotDifficulty(preset.id)}
+                    className={`py-1.5 px-2 rounded-md text-xs font-medium transition cursor-pointer flex flex-col items-center justify-center ${
+                      isSelected
+                        ? 'bg-board-dark text-white shadow-sm border border-board-light/40 font-semibold'
+                        : 'text-gray-400 hover:text-white hover:bg-surface-accent'
+                    }`}
+                  >
+                    <span>{preset.label}</span>
+                    <span className="text-[10px] opacity-75">{preset.spec}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Description of active level */}
+            <p className="text-[11px] text-gray-400 mt-2 px-1">{selectedPreset.description}</p>
+          </div>
+        )}
 
         {/* Move History Table */}
         <div
@@ -403,40 +650,59 @@ export function GameView({ initialMode }: GameViewProps) {
             Action Controls
           </h3>
 
-          <button
-            type="button"
-            data-testid="new-game-btn"
-            onClick={handleNewGame}
-            className="w-full py-2.5 px-3 rounded-lg bg-surface-accent hover:bg-surface-border active:scale-[0.99] text-white text-xs sm:text-sm font-medium transition flex items-center justify-center gap-2 border border-surface-border cursor-pointer"
-          >
-            <RotateCcw className="w-4 h-4 text-gray-300" />
-            <span>New Game</span>
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              data-testid="new-game-btn"
+              onClick={handleNewGame}
+              className="py-2.5 px-3 rounded-lg bg-surface-accent hover:bg-surface-border active:scale-[0.99] text-white text-xs sm:text-sm font-medium transition flex items-center justify-center gap-2 border border-surface-border cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4 text-gray-300" />
+              <span>New Game</span>
+            </button>
 
-          <button
-            type="button"
-            data-testid="flip-board-btn"
-            onClick={handleFlipBoard}
-            className="w-full py-2.5 px-3 rounded-lg bg-surface-accent hover:bg-surface-border active:scale-[0.99] text-white text-xs sm:text-sm font-medium transition flex items-center justify-center gap-2 border border-surface-border cursor-pointer"
-          >
-            <ArrowUpDown className="w-4 h-4 text-gray-300" />
-            <span>Flip Board</span>
-          </button>
+            <button
+              type="button"
+              data-testid="flip-board-btn"
+              onClick={handleFlipBoard}
+              className="py-2.5 px-3 rounded-lg bg-surface-accent hover:bg-surface-border active:scale-[0.99] text-white text-xs sm:text-sm font-medium transition flex items-center justify-center gap-2 border border-surface-border cursor-pointer"
+            >
+              <ArrowUpDown className="w-4 h-4 text-gray-300" />
+              <span>Flip Board</span>
+            </button>
+          </div>
 
-          <button
-            type="button"
-            data-testid="resign-btn"
-            disabled={gameOver}
-            onClick={handleResignClick}
-            className={`w-full py-2.5 px-3 rounded-lg text-xs sm:text-sm font-medium transition flex items-center justify-center gap-2 border cursor-pointer ${
-              gameOver
-                ? 'opacity-40 cursor-not-allowed bg-surface-accent border-surface-border text-gray-500'
-                : 'bg-red-950/20 hover:bg-red-950/50 active:scale-[0.99] text-red-300 hover:text-red-200 border-red-900/40'
-            }`}
-          >
-            <Flag className="w-4 h-4 text-red-400" />
-            <span>Resign</span>
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              data-testid="draw-btn"
+              disabled={gameOver}
+              onClick={handleDrawClick}
+              className={`py-2.5 px-3 rounded-lg text-xs sm:text-sm font-medium transition flex items-center justify-center gap-2 border cursor-pointer ${
+                gameOver
+                  ? 'opacity-40 cursor-not-allowed bg-surface-accent border-surface-border text-gray-500'
+                  : 'bg-amber-950/20 hover:bg-amber-950/50 active:scale-[0.99] text-amber-300 hover:text-amber-200 border-amber-900/40'
+              }`}
+            >
+              <Handshake className="w-4 h-4 text-amber-400" />
+              <span>Offer Draw</span>
+            </button>
+
+            <button
+              type="button"
+              data-testid="resign-btn"
+              disabled={gameOver}
+              onClick={handleResignClick}
+              className={`py-2.5 px-3 rounded-lg text-xs sm:text-sm font-medium transition flex items-center justify-center gap-2 border cursor-pointer ${
+                gameOver
+                  ? 'opacity-40 cursor-not-allowed bg-surface-accent border-surface-border text-gray-500'
+                  : 'bg-red-950/20 hover:bg-red-950/50 active:scale-[0.99] text-red-300 hover:text-red-200 border-red-900/40'
+              }`}
+            >
+              <Flag className="w-4 h-4 text-red-400" />
+              <span>Resign</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -121,6 +121,19 @@ describe('useGameStore', () => {
     });
   });
 
+  describe('agreeDraw', () => {
+    it('sets game status to draw and resets isBotThinking', () => {
+      useGameStore.setState({ isBotThinking: true });
+      const store = useGameStore.getState();
+
+      store.agreeDraw();
+
+      const updated = useGameStore.getState();
+      expect(updated.game.status).toBe('draw');
+      expect(updated.isBotThinking).toBe(false);
+    });
+  });
+
   describe('requestBotMove', () => {
     it('resolves gracefully when no engine bridge is active', async () => {
       const store = useGameStore.getState();

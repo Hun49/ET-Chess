@@ -141,6 +141,63 @@ describe('GameView and Chessboard integration', () => {
       expect(html).toContain('0 moves');
       expect(html).toContain('White to move');
     });
+
+    it('displays bot difficulty selector and tabs in bot mode', () => {
+      useGameStore.setState({ gameMode: 'bot', botDifficulty: 'intermediate' });
+      const html = renderToString(React.createElement(GameView, { initialMode: 'bot' }));
+
+      expect(html).toContain('data-testid="difficulty-selector"');
+      expect(html).toContain('data-testid="difficulty-option-beginner"');
+      expect(html).toContain('data-testid="difficulty-option-intermediate"');
+      expect(html).toContain('data-testid="difficulty-option-advanced"');
+      expect(html).toContain('data-testid="difficulty-option-full-strength"');
+
+      // Spec badges
+      expect(html).toContain('Depth 5');
+      expect(html).toContain('Depth 10');
+      expect(html).toContain('1000ms');
+      expect(html).toContain('3000ms');
+    });
+
+    it('renders pulsating bot thinking indicator when bot is calculating', () => {
+      useGameStore.setState({
+        gameMode: 'bot',
+        botDifficulty: 'intermediate',
+        isBotThinking: true,
+      });
+
+      const html = renderToString(React.createElement(GameView, { initialMode: 'bot' }));
+
+      expect(html).toContain('data-testid="bot-thinking-indicator"');
+      expect(html).toContain('data-testid="bot-thinking-text"');
+      expect(html).toContain('Thinking (Depth 10)...');
+    });
+
+    it('renders draw offer, resign, and sound toggle action controls', () => {
+      const html = renderToString(React.createElement(GameView, { initialMode: 'local' }));
+
+      expect(html).toContain('data-testid="draw-btn"');
+      expect(html).toContain('Offer Draw');
+      expect(html).toContain('data-testid="resign-btn"');
+      expect(html).toContain('Resign');
+      expect(html).toContain('data-testid="sound-toggle-btn"');
+    });
+
+    it('displays game over overlay when draw is agreed', () => {
+      useGameStore.setState({
+        game: {
+          ...useGameStore.getState().game,
+          status: 'draw',
+        },
+      });
+
+      const html = renderToString(React.createElement(GameView));
+
+      expect(html).toContain('data-testid="game-over-dialog"');
+      expect(html).toContain('Draw');
+      expect(html).toContain('Game ended in a mutual draw.');
+      expect(html).toContain('Play Again');
+    });
   });
 
   describe('ChessboardView helper functions', () => {
