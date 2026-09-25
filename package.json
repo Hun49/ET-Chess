@@ -1,0 +1,22 @@
+{
+  "name": "et-chess-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.21.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3",
+    "turbo": "^2.11.3",
+    "typescript": "^5.8.2"
+  }
+}
