@@ -5,5 +5,5 @@
     "lib": ["DOM", "ESNext"],
     "noEmit": true
   },
-  "include": ["app", "src", "*.d.ts", "*.config.ts", "*.config.js"]
+  "include": ["app", "src", "*.d.ts", "*.config.ts", "*.config.js", "nativewind-env.d.ts"]
 }

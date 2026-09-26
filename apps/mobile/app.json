@@ -16,6 +16,12 @@
       "bundleIdentifier": "com.etchess.app",
       "supportsTablet": true
     },
-    "plugins": ["expo-router"]
+    "plugins": ["expo-router"],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "9961cc46-056f-4665-acd4-952dab28038b"
+      }
+    }
   }
 }
