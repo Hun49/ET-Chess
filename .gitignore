@@ -11,3 +11,7 @@ coverage
 .DS_Store
 .env
 .env*.local
+
+# Native directories
+apps/mobile/android/
+apps/mobile/ios/
