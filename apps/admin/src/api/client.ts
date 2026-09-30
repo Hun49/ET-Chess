@@ -1,4 +1,4 @@
-import type { AppType } from '@et-chess/api';
+import type { AppType } from '@et-chess/api/client';
 import type { Report, User } from '@et-chess/types';
 import { hc } from 'hono/client';
 
@@ -148,4 +148,139 @@ export async function fetchUsers(client: HonoClient = apiClient): Promise<UsersR
     // Fall back to mock users
   }
   return { users: [...MOCK_USERS], isMock: true };
+}
+
+export interface AdminRoom {
+  id: string;
+  code: string;
+  hostUserId: string;
+  guestUserId: string | null;
+  timeControlMinutes: number;
+  timeControlIncrement: number;
+  hostColor: 'white' | 'black' | 'random';
+  kind: 'friend' | 'tournament';
+  status: 'waiting' | 'ready' | 'active' | 'finished';
+  createdAt: Date;
+}
+
+export interface AdminRoomsResult {
+  rooms: AdminRoom[];
+  isMock: boolean;
+}
+
+export interface AdminTournament {
+  id: string;
+  name: string;
+  status: 'registering' | 'in-progress' | 'finished';
+  createdAt: Date;
+}
+
+export interface AdminTournamentsResult {
+  tournaments: AdminTournament[];
+  isMock: boolean;
+}
+
+export const MOCK_ADMIN_ROOMS: AdminRoom[] = [
+  {
+    id: 'room_1',
+    code: 'CHESS1',
+    hostUserId: 'usr_kasparov_1',
+    guestUserId: 'usr_carlsen_2',
+    timeControlMinutes: 10,
+    timeControlIncrement: 0,
+    hostColor: 'random',
+    kind: 'friend',
+    status: 'active',
+    createdAt: new Date('2026-03-30T10:00:00.000Z'),
+  },
+  {
+    id: 'room_2',
+    code: 'RAPID2',
+    hostUserId: 'usr_nakamura_3',
+    guestUserId: null,
+    timeControlMinutes: 5,
+    timeControlIncrement: 3,
+    hostColor: 'white',
+    kind: 'friend',
+    status: 'waiting',
+    createdAt: new Date('2026-03-30T10:15:00.000Z'),
+  },
+];
+
+export const MOCK_ADMIN_TOURNAMENTS: AdminTournament[] = [
+  {
+    id: 't_mock_1',
+    name: 'ET Grand Prix 2026',
+    status: 'in-progress',
+    createdAt: new Date('2026-03-30T09:00:00.000Z'),
+  },
+  {
+    id: 't_mock_2',
+    name: 'Spring Rapid Knockout',
+    status: 'registering',
+    createdAt: new Date('2026-03-30T11:00:00.000Z'),
+  },
+];
+
+export async function fetchAdminRooms(client: HonoClient = apiClient): Promise<AdminRoomsResult> {
+  try {
+    const res = await (client as any).admin.rooms.$get();
+    if (res.ok) {
+      const data = (await res.json()) as { rooms: any[] };
+      const rooms: AdminRoom[] = data.rooms.map((r: any) => ({
+        ...r,
+        createdAt: new Date(r.createdAt),
+      }));
+      return { rooms, isMock: false };
+    }
+  } catch {
+    // Fall back to mock
+  }
+  return { rooms: [...MOCK_ADMIN_ROOMS], isMock: true };
+}
+
+export async function fetchAdminTournaments(
+  client: HonoClient = apiClient,
+): Promise<AdminTournamentsResult> {
+  try {
+    const res = await (client as any).admin.tournaments.$get();
+    if (res.ok) {
+      const data = (await res.json()) as { tournaments: any[] };
+      const tournaments: AdminTournament[] = data.tournaments.map((t: any) => ({
+        ...t,
+        createdAt: new Date(t.createdAt),
+      }));
+      return { tournaments, isMock: false };
+    }
+  } catch {
+    // Fall back to mock
+  }
+  return { tournaments: [...MOCK_ADMIN_TOURNAMENTS], isMock: true };
+}
+
+export async function fetchAdminStats(client: HonoClient = apiClient): Promise<{
+  totalRooms: number;
+  activeRooms: number;
+  waitingRooms: number;
+  totalTournaments: number;
+  activeTournaments: number;
+  isMock: boolean;
+}> {
+  try {
+    const res = await (client as any).admin.stats.$get();
+    if (res.ok) {
+      const data = await res.json();
+      return { ...data, isMock: false };
+    }
+  } catch {
+    // Fall back
+  }
+  return {
+    totalRooms: 2,
+    activeRooms: 1,
+    waitingRooms: 1,
+    totalTournaments: 2,
+    activeTournaments: 2,
+    isMock: true,
+  };
 }

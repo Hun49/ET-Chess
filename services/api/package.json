@@ -6,17 +6,23 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./client": "./src/app.ts"
   },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@better-auth/expo": "^1.7.6",
+    "@et-chess/chess-core": "workspace:*",
+    "@et-chess/realtime-protocol": "workspace:*",
     "@et-chess/types": "workspace:*",
     "@hono/zod-validator": "^0.9.1",
+    "better-auth": "^1.7.6",
     "drizzle-orm": "^0.45.3",
     "hono": "^4.13.9",
     "zod": "^3.25.76"

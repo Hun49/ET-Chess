@@ -140,6 +140,25 @@ export function getSanHistory(state: GameState): string[] {
   return sanMoves;
 }
 
+/**
+ * Generates standard PGN (Portable Game Notation) string for the game state.
+ */
+export function getPgn(state: GameState): string {
+  const chess = new Chess();
+  for (const m of state.moveHistory) {
+    try {
+      chess.move({
+        from: m.from,
+        to: m.to,
+        promotion: m.promotion,
+      });
+    } catch {
+      break;
+    }
+  }
+  return chess.pgn();
+}
+
 const PIECE_VALUES: Record<string, number> = {
   p: 100,
   n: 320,
@@ -287,3 +306,10 @@ export function findBestMove(stateOrFen: GameState | string): Move | null {
 
   return bestMove;
 }
+
+export {
+  calculateElo,
+  type EloDeltaResult,
+  type EloOptions,
+  type MatchGameResult,
+} from './elo';

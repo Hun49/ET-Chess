@@ -6,6 +6,8 @@ import {
   LayoutDashboard,
   RefreshCw,
   ShieldAlert,
+  Swords,
+  Trophy,
   Users,
 } from 'lucide-react';
 import { fetchHealth } from '../api/client';
@@ -123,6 +125,38 @@ export function RootLayout() {
                 >
                   <LayoutDashboard className="w-4 h-4 text-board-light" />
                   <span>Overview</span>
+                </Link>
+
+                <Link
+                  to="/rooms"
+                  activeProps={{
+                    className:
+                      'bg-surface-accent text-white font-medium border-surface-border border-l-4 border-l-board-dark shadow-sm',
+                  }}
+                  inactiveProps={{
+                    className:
+                      'text-gray-400 hover:text-white hover:bg-surface-accent/50 border-transparent border-l-4 border-l-transparent',
+                  }}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 border"
+                >
+                  <Swords className="w-4 h-4 text-green-400" />
+                  <span>Online Rooms</span>
+                </Link>
+
+                <Link
+                  to="/tournaments"
+                  activeProps={{
+                    className:
+                      'bg-surface-accent text-white font-medium border-surface-border border-l-4 border-l-board-dark shadow-sm',
+                  }}
+                  inactiveProps={{
+                    className:
+                      'text-gray-400 hover:text-white hover:bg-surface-accent/50 border-transparent border-l-4 border-l-transparent',
+                  }}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 border"
+                >
+                  <Trophy className="w-4 h-4 text-amber-400" />
+                  <span>Tournaments</span>
                 </Link>
 
                 <Link

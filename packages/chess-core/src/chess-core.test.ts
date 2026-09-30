@@ -7,6 +7,7 @@ import {
   getAllLegalMoves,
   getGameStatus,
   getLegalMoves,
+  getPgn,
   getSanHistory,
   isGameOver,
 } from './index';
@@ -182,6 +183,16 @@ describe('packages/chess-core', () => {
     game = applyMove(game, { from: 'b8', to: 'c6' });
 
     expect(getSanHistory(game)).toEqual(['e4', 'e5', 'Nf3', 'Nc6']);
+  });
+
+  it('correctly generates PGN string for played moves', () => {
+    let game = createGame();
+    game = applyMove(game, { from: 'e2', to: 'e4' });
+    game = applyMove(game, { from: 'e7', to: 'e5' });
+    game = applyMove(game, { from: 'g1', to: 'f3' });
+
+    const pgn = getPgn(game);
+    expect(pgn).toContain('1. e4 e5 2. Nf3');
   });
 
   it('getAllLegalMoves returns all 20 legal moves in starting position', () => {

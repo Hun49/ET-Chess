@@ -1,11 +1,25 @@
 import { useRouter } from 'expo-router';
-import { Bot, ChevronRight, Cpu, Settings, Sparkles, Swords, Users } from 'lucide-react-native';
+import {
+  Bot,
+  ChevronRight,
+  Cpu,
+  Globe,
+  Settings,
+  Sparkles,
+  Swords,
+  User,
+  Users,
+} from 'lucide-react-native';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { borderRadius, spacing, themeColors, typography } from '../src/theme';
 
 export default function HomeScreen() {
   const router = useRouter();
+
+  const handlePlayOnline = () => {
+    router.push('/online');
+  };
 
   const handlePlayBot = () => {
     router.push({ pathname: '/game', params: { mode: 'bot' } });
@@ -22,6 +36,35 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Top Actions: Account & Settings */}
+        <View style={styles.topActionsRow}>
+          <Pressable
+            onPress={() => router.push('/auth')}
+            style={({ pressed }) => [
+              styles.topActionButton,
+              pressed && styles.topActionButtonPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Account"
+          >
+            <User size={15} color={themeColors.text.primary} />
+            <Text style={styles.topActionText}>Account</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={handleOpenSettings}
+            style={({ pressed }) => [
+              styles.topActionButton,
+              pressed && styles.topActionButtonPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+          >
+            <Settings size={15} color={themeColors.text.primary} />
+            <Text style={styles.topActionText}>Settings</Text>
+          </Pressable>
+        </View>
+
         {/* Header / Brand Hero */}
         <View style={styles.heroSection}>
           <View style={styles.badgeContainer}>
@@ -109,6 +152,44 @@ export default function HomeScreen() {
             </View>
           </Pressable>
 
+          {/* Card: Online Multiplayer (v2.0) */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.card,
+              pressed && styles.cardPressed,
+              { borderColor: 'rgba(52, 211, 153, 0.4)' },
+            ]}
+            onPress={handlePlayOnline}
+            accessibilityRole="button"
+            accessibilityLabel="Online Multiplayer"
+          >
+            <View style={styles.cardHeader}>
+              <View
+                style={[styles.botIconWrapper, { backgroundColor: 'rgba(52, 211, 153, 0.15)' }]}
+              >
+                <Globe size={24} color="#34d399" />
+              </View>
+              <View
+                style={[styles.settingsTagBadge, { backgroundColor: 'rgba(52, 211, 153, 0.15)' }]}
+              >
+                <Text style={[styles.settingsTagText, { color: '#34d399' }]}>Version 2.0</Text>
+              </View>
+            </View>
+
+            <View style={styles.cardBody}>
+              <Text style={styles.cardTitle}>Online Arena</Text>
+              <Text style={styles.cardDescription}>
+                Challenge friends via shareable 6-digit room codes, play ranked matches, and compete
+                in tournaments.
+              </Text>
+            </View>
+
+            <View style={styles.cardFooter}>
+              <Text style={[styles.footerActionText, { color: '#34d399' }]}>Enter Arena</Text>
+              <ChevronRight size={18} color="#34d399" />
+            </View>
+          </Pressable>
+
           {/* Card 3: Settings */}
           <Pressable
             style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
@@ -157,6 +238,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.xxxl,
+  },
+  topActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  topActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: themeColors.surface.accent,
+    borderWidth: 1,
+    borderColor: themeColors.surface.border,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: borderRadius.md,
+  },
+  topActionButtonPressed: {
+    opacity: 0.8,
+  },
+  topActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: themeColors.text.primary,
   },
   heroSection: {
     alignItems: 'center',

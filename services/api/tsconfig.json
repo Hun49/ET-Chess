@@ -3,6 +3,8 @@
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
+    "declaration": false,
+    "declarationMap": false,
     "types": ["@cloudflare/workers-types"]
   },
   "include": ["src/**/*"]

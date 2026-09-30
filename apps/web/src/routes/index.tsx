@@ -3,6 +3,7 @@ import {
   Bot,
   ChevronRight,
   Cpu,
+  Globe,
   Layers,
   ShieldCheck,
   Sparkles,
@@ -34,11 +35,42 @@ function IndexPage() {
 
         <p className="mt-3 text-sm sm:text-base text-gray-300 max-w-xl text-center leading-relaxed">
           Master every position. Challenge Stockfish running locally in your browser with zero
-          latency, or play head-to-head with a companion over the board.
+          latency, or play head-to-head with a companion over the board or online.
         </p>
 
+        {/* Featured 2.0 Mode: Online Multiplayer */}
+        <Link
+          to="/online"
+          className="group relative w-full max-w-4xl mt-10 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-surface-card via-surface-accent/80 to-surface-card p-6 sm:p-8 hover:border-emerald-500/60 transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between shadow-2xl cursor-pointer"
+        >
+          <div className="flex items-start sm:items-center gap-5">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform duration-200 shadow-sm shrink-0">
+              <Globe className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xl sm:text-2xl font-bold text-white group-hover:text-emerald-400 transition-colors">
+                  Online Multiplayer
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase">
+                  Version 2.0
+                </span>
+              </div>
+              <p className="text-sm text-gray-300 max-w-xl leading-relaxed">
+                Live friend challenge rooms, ranked matchmaking with rating expansion, and
+                single-elimination tournament brackets. Powered by Cloudflare Durable Objects.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 sm:mt-0 flex items-center gap-2 text-sm font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors shrink-0">
+            <span>Enter Arena</span>
+            <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
+
         {/* Game Mode Selection Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mt-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mt-6">
           {/* Mode 1: Play vs Stockfish */}
           <Link
             to="/game"

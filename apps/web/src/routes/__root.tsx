@@ -1,5 +1,6 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
-import { GitBranch, LayoutGrid, Swords } from 'lucide-react';
+import { GitBranch, Globe, LayoutGrid, Swords } from 'lucide-react';
+import { AuthButton } from '../features/auth/AuthButton';
 
 export const rootRoute = createRootRoute({
   component: RootLayout,
@@ -22,8 +23,8 @@ function RootLayout() {
                 <span className="text-lg font-bold tracking-tight text-white group-hover:text-board-light transition-colors">
                   ET Chess
                 </span>
-                <span className="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-surface-accent border border-surface-border text-gray-300">
-                  v1.0
+                <span className="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-surface-accent border border-surface-border text-emerald-400">
+                  v2.0
                 </span>
               </div>
               <p className="text-[11px] text-gray-400 leading-none">Engine-Ready Local Chess</p>
@@ -63,7 +64,24 @@ function RootLayout() {
               <span>Game</span>
             </Link>
 
+            <Link
+              to="/online"
+              activeProps={{
+                className: 'bg-surface-accent text-white font-medium border-surface-border',
+              }}
+              inactiveProps={{
+                className:
+                  'text-gray-400 hover:text-white hover:bg-surface-accent/50 border-transparent',
+              }}
+              className="px-3 py-1.5 rounded-lg text-sm transition-all duration-150 border flex items-center gap-2"
+            >
+              <Globe className="w-4 h-4 text-emerald-400" />
+              <span>Online</span>
+            </Link>
+
             <div className="w-px h-5 bg-surface-border mx-1 sm:mx-2 hidden sm:block" />
+
+            <AuthButton />
 
             <a
               href="https://github.com/hunwork/ET-Chess"

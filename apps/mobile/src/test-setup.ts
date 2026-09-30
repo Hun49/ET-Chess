@@ -35,6 +35,28 @@ vi.mock('expo-status-bar', () => ({
   StatusBar: () => null,
 }));
 
+const secureStoreMap = new Map<string, string>();
+export const mockSecureStore = {
+  getItemAsync: vi.fn(async (key: string) => secureStoreMap.get(key) ?? null),
+  setItemAsync: vi.fn(async (key: string, value: string) => {
+    secureStoreMap.set(key, value);
+  }),
+  deleteItemAsync: vi.fn(async (key: string) => {
+    secureStoreMap.delete(key);
+  }),
+};
+
+vi.mock('expo-secure-store', () => ({
+  default: mockSecureStore,
+  ...mockSecureStore,
+}));
+
+vi.mock('@better-auth/expo/client', () => ({
+  expoClient: vi.fn(() => ({
+    id: 'expoClient',
+  })),
+}));
+
 vi.mock('lucide-react-native', () => {
   const MockIcon = (props: Record<string, unknown>) => React.createElement('svg', props);
   return {
@@ -50,12 +72,15 @@ vi.mock('lucide-react-native', () => {
     Flag: MockIcon,
     Handshake: MockIcon,
     Info: MockIcon,
+    Lock: MockIcon,
+    Mail: MockIcon,
     RefreshCw: MockIcon,
     RotateCcw: MockIcon,
     Settings: MockIcon,
     Sparkles: MockIcon,
     Swords: MockIcon,
     Trophy: MockIcon,
+    User: MockIcon,
     Users: MockIcon,
     Volume2: MockIcon,
   };

@@ -1,5 +1,5 @@
 import { getLegalMoves, isGameOver } from '@et-chess/chess-core';
-import type { PlayerColor } from '@et-chess/types';
+import type { GameState, PlayerColor } from '@et-chess/types';
 import { useMemo, useState } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { useGameStore } from '../../store/gameStore';
@@ -7,6 +7,9 @@ import { useGameStore } from '../../store/gameStore';
 export interface ChessboardViewProps {
   orientation?: 'white' | 'black';
   boardOrientation?: 'white' | 'black';
+  gameState?: GameState;
+  onMove?: (move: { from: string; to: string; promotion?: 'q' | 'r' | 'b' | 'n' }) => boolean;
+  disabled?: boolean;
 }
 
 /**
@@ -118,9 +121,18 @@ export function findKingSquare(fen: string, color: PlayerColor): string | null {
   return null;
 }
 
-export function ChessboardView({ orientation = 'white', boardOrientation }: ChessboardViewProps) {
-  const game = useGameStore((state) => state.game);
-  const makeMove = useGameStore((state) => state.makeMove);
+export function ChessboardView({
+  orientation = 'white',
+  boardOrientation,
+  gameState: controlledGame,
+  onMove: controlledOnMove,
+  disabled = false,
+}: ChessboardViewProps) {
+  const storeGame = useGameStore((state) => state.game);
+  const storeMakeMove = useGameStore((state) => state.makeMove);
+
+  const game = controlledGame ?? storeGame;
+  const makeMove = controlledOnMove ?? storeMakeMove;
 
   const effectiveOrientation = boardOrientation ?? orientation;
 
@@ -128,7 +140,7 @@ export function ChessboardView({ orientation = 'white', boardOrientation }: Ches
   const [legalMoves, setLegalMoves] = useState<string[]>([]);
 
   const handleSquareClick = (square: string) => {
-    if (isGameOver(game)) {
+    if (disabled || isGameOver(game)) {
       setSelectedSquare(null);
       setLegalMoves([]);
       return;
@@ -169,7 +181,7 @@ export function ChessboardView({ orientation = 'white', boardOrientation }: Ches
   };
 
   const handlePieceDrop = (sourceSquare: string, targetSquare: string | null): boolean => {
-    if (!targetSquare) return false;
+    if (disabled || !targetSquare) return false;
     if (isGameOver(game)) return false;
 
     const isPromotion = isPawnMoveToBackRank(game.fen, sourceSquare, targetSquare);

@@ -12,14 +12,18 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@better-auth/expo": "^1.7.6",
     "@et-chess/bot-engine": "workspace:*",
     "@et-chess/chess-core": "workspace:*",
+    "@et-chess/realtime-protocol": "workspace:*",
     "@et-chess/types": "workspace:*",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "better-auth": "^1.7.6",
     "expo": "^57.0.25",
     "expo-constants": "^57.0.19",
     "expo-linking": "^57.0.11",
     "expo-router": "^57.0.23",
+    "expo-secure-store": "^57.0.4",
     "expo-status-bar": "^57.0.1",
     "expo-system-ui": "~57.0.4",
     "lucide-react-native": "^1.48.0",

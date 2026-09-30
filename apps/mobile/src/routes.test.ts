@@ -3,8 +3,10 @@ import path from 'node:path';
 import type { BotDifficulty } from '@et-chess/types';
 import { describe, expect, it } from 'vitest';
 import RootLayout from '../app/_layout';
+import AuthScreen from '../app/auth';
 import GameScreen from '../app/game';
 import HomeScreen from '../app/index';
+import OnlineScreen from '../app/online';
 import SettingsScreen from '../app/settings';
 import { DIFFICULTY_OPTIONS, parseMobileGameParams } from './navigation';
 import { themeColors } from './theme';
@@ -15,6 +17,8 @@ describe('apps/mobile route definitions and navigation', () => {
     expect(typeof HomeScreen).toBe('function');
     expect(typeof GameScreen).toBe('function');
     expect(typeof SettingsScreen).toBe('function');
+    expect(typeof AuthScreen).toBe('function');
+    expect(typeof OnlineScreen).toBe('function');
   });
 
   describe('parseMobileGameParams', () => {

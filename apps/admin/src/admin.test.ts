@@ -5,10 +5,15 @@ import { renderToString } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import {
   apiClient,
+  fetchAdminRooms,
+  fetchAdminStats,
+  fetchAdminTournaments,
   fetchHealth,
   fetchReports,
   fetchUsers,
   type HonoClient,
+  MOCK_ADMIN_ROOMS,
+  MOCK_ADMIN_TOURNAMENTS,
   MOCK_REPORTS,
   MOCK_USERS,
 } from './api/client';
@@ -16,6 +21,8 @@ import { router, routeTree } from './router';
 import { rootRoute } from './routes/__root';
 import { indexRoute } from './routes/index';
 import { reportsRoute } from './routes/reports';
+import { roomsRoute } from './routes/rooms';
+import { tournamentsRoute } from './routes/tournaments';
 import { usersRoute } from './routes/users';
 
 function createTestQueryClient(prefill = true) {
@@ -40,6 +47,14 @@ function createTestQueryClient(prefill = true) {
     });
     queryClient.setQueryData(['users'], {
       users: MOCK_USERS,
+      isMock: false,
+    });
+    queryClient.setQueryData(['admin-rooms'], {
+      rooms: MOCK_ADMIN_ROOMS,
+      isMock: false,
+    });
+    queryClient.setQueryData(['admin-tournaments'], {
+      tournaments: MOCK_ADMIN_TOURNAMENTS,
       isMock: false,
     });
   }
@@ -210,16 +225,167 @@ describe('Admin Dashboard (apps/admin)', () => {
         expect(result.users[0]?.createdAt).toBeInstanceOf(Date);
       });
     });
+
+    describe('fetchAdminRooms', () => {
+      it('returns parsed rooms and isMock false when client responds successfully', async () => {
+        const mockRoomsPayload = {
+          rooms: [
+            {
+              id: 'room_live_1',
+              code: 'GAME99',
+              hostUserId: 'usr_1',
+              guestUserId: 'usr_2',
+              timeControlMinutes: 10,
+              timeControlIncrement: 0,
+              hostColor: 'white',
+              kind: 'friend',
+              status: 'active',
+              createdAt: '2026-03-30T10:00:00.000Z',
+            },
+          ],
+        };
+
+        const mockClient = {
+          admin: {
+            rooms: {
+              $get: async () => ({
+                ok: true,
+                json: async () => mockRoomsPayload,
+              }),
+            },
+          },
+        } as unknown as HonoClient;
+
+        const result = await fetchAdminRooms(mockClient);
+        expect(result.isMock).toBe(false);
+        expect(result.rooms).toHaveLength(1);
+        expect(result.rooms[0]?.code).toBe('GAME99');
+        expect(result.rooms[0]?.createdAt).toBeInstanceOf(Date);
+      });
+
+      it('gracefully falls back to MOCK_ADMIN_ROOMS when client call fails', async () => {
+        const failingClient = {
+          admin: {
+            rooms: {
+              $get: async () => {
+                throw new Error('500 Error');
+              },
+            },
+          },
+        } as unknown as HonoClient;
+
+        const result = await fetchAdminRooms(failingClient);
+        expect(result.isMock).toBe(true);
+        expect(result.rooms.length).toBeGreaterThanOrEqual(MOCK_ADMIN_ROOMS.length);
+        expect(result.rooms[0]?.code).toBe(MOCK_ADMIN_ROOMS[0]?.code);
+      });
+    });
+
+    describe('fetchAdminTournaments', () => {
+      it('returns parsed tournaments and isMock false when client responds successfully', async () => {
+        const mockTournamentsPayload = {
+          tournaments: [
+            {
+              id: 't_live_1',
+              name: 'Live Championship',
+              status: 'in-progress',
+              createdAt: '2026-03-30T12:00:00.000Z',
+            },
+          ],
+        };
+
+        const mockClient = {
+          admin: {
+            tournaments: {
+              $get: async () => ({
+                ok: true,
+                json: async () => mockTournamentsPayload,
+              }),
+            },
+          },
+        } as unknown as HonoClient;
+
+        const result = await fetchAdminTournaments(mockClient);
+        expect(result.isMock).toBe(false);
+        expect(result.tournaments).toHaveLength(1);
+        expect(result.tournaments[0]?.name).toBe('Live Championship');
+        expect(result.tournaments[0]?.createdAt).toBeInstanceOf(Date);
+      });
+
+      it('gracefully falls back to MOCK_ADMIN_TOURNAMENTS when client call fails', async () => {
+        const failingClient = {
+          admin: {
+            tournaments: {
+              $get: async () => {
+                throw new Error('Network error');
+              },
+            },
+          },
+        } as unknown as HonoClient;
+
+        const result = await fetchAdminTournaments(failingClient);
+        expect(result.isMock).toBe(true);
+        expect(result.tournaments.length).toBeGreaterThanOrEqual(MOCK_ADMIN_TOURNAMENTS.length);
+      });
+    });
+
+    describe('fetchAdminStats', () => {
+      it('returns stats payload when client responds successfully', async () => {
+        const mockStats = {
+          totalRooms: 12,
+          activeRooms: 5,
+          waitingRooms: 7,
+          totalTournaments: 4,
+          activeTournaments: 1,
+        };
+
+        const mockClient = {
+          admin: {
+            stats: {
+              $get: async () => ({
+                ok: true,
+                json: async () => mockStats,
+              }),
+            },
+          },
+        } as unknown as HonoClient;
+
+        const result = await fetchAdminStats(mockClient);
+        expect(result.isMock).toBe(false);
+        expect(result.totalRooms).toBe(12);
+        expect(result.activeRooms).toBe(5);
+      });
+
+      it('gracefully falls back to mock stats when client fails', async () => {
+        const failingClient = {
+          admin: {
+            stats: {
+              $get: async () => {
+                throw new Error('Failed');
+              },
+            },
+          },
+        } as unknown as HonoClient;
+
+        const result = await fetchAdminStats(failingClient);
+        expect(result.isMock).toBe(true);
+        expect(result.totalRooms).toBe(2);
+      });
+    });
   });
 
   describe('Route Configurations and Router', () => {
-    it('registers root, overview (/), reports (/reports), and users (/users) routes', () => {
+    it('registers root, overview (/), rooms (/rooms), tournaments (/tournaments), reports (/reports), and users (/users) routes', () => {
       expect(rootRoute).toBeDefined();
       expect(indexRoute).toBeDefined();
+      expect(roomsRoute).toBeDefined();
+      expect(tournamentsRoute).toBeDefined();
       expect(reportsRoute).toBeDefined();
       expect(usersRoute).toBeDefined();
 
       expect(indexRoute.fullPath).toBe('/');
+      expect(roomsRoute.fullPath).toBe('/rooms');
+      expect(tournamentsRoute.fullPath).toBe('/tournaments');
       expect(reportsRoute.fullPath).toBe('/reports');
       expect(usersRoute.fullPath).toBe('/users');
 
@@ -239,8 +405,10 @@ describe('Admin Dashboard (apps/admin)', () => {
       expect(html).toContain('Admin');
       expect(html).toContain('Control Center &amp; Moderation');
 
-      // Nav items
+      // Nav items including V2 items
       expect(html).toContain('Overview');
+      expect(html).toContain('Rooms');
+      expect(html).toContain('Tournaments');
       expect(html).toContain('Reports');
       expect(html).toContain('Users');
 
@@ -270,6 +438,40 @@ describe('Admin Dashboard (apps/admin)', () => {
       expect(html).toContain('GET /users');
       expect(html).toContain('GET /reports');
       expect(html).toContain('POST /reports');
+    });
+
+    it('renders RoomsPage with table headers, mock rooms, and filters at /rooms', async () => {
+      const html = await renderAppAtRoute('/rooms');
+
+      // Title & search
+      expect(html).toContain('Online Game Rooms');
+      expect(html).toContain('Search room code...');
+
+      // Columns
+      expect(html).toContain('Code');
+      expect(html).toContain('Kind');
+      expect(html).toContain('Status');
+      expect(html).toContain('Time Control');
+      expect(html).toContain('Host / Guest');
+
+      // Mock room data
+      expect(html).toContain('CHESS1');
+      expect(html).toContain('RAPID2');
+      expect(html).toContain('usr_kaspar');
+    });
+
+    it('renders TournamentsPage with header, tournament cards, and metrics at /tournaments', async () => {
+      const html = await renderAppAtRoute('/tournaments');
+
+      // Title & subtitle
+      expect(html).toContain('Tournaments Management');
+      expect(html).toContain('single-elimination tournament cups');
+
+      // Mock tournament data
+      expect(html).toContain('ET Grand Prix 2026');
+      expect(html).toContain('Spring Rapid Knockout');
+      expect(html).toContain('in-progress');
+      expect(html).toContain('registering');
     });
 
     it('renders ReportsPage with table headers, mock reports, and search input at /reports', async () => {

@@ -13,9 +13,11 @@
   "dependencies": {
     "@et-chess/bot-engine": "workspace:*",
     "@et-chess/chess-core": "workspace:*",
+    "@et-chess/realtime-protocol": "workspace:*",
     "@et-chess/types": "workspace:*",
     "@tanstack/react-query": "^5.103.2",
     "@tanstack/react-router": "^1.170.39",
+    "better-auth": "^1.7.6",
     "lucide-react": "^1.48.0",
     "react": "^19.3.0",
     "react-chessboard": "^5.12.1",

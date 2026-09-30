@@ -1,5 +1,5 @@
 import type { Report, User } from '@et-chess/types';
-import { drizzle } from 'drizzle-orm/d1';
+import { type AnyD1Database, drizzle } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
 
 export const INITIAL_USERS: User[] = [
@@ -43,7 +43,7 @@ export function resetStore(): void {
   inMemoryReports = [...INITIAL_REPORTS];
 }
 
-export async function getUsers(d1?: D1Database): Promise<User[]> {
+export async function getUsers(d1?: AnyD1Database): Promise<User[]> {
   if (d1) {
     try {
       const db = drizzle(d1, { schema });
@@ -62,7 +62,7 @@ export async function getUsers(d1?: D1Database): Promise<User[]> {
   return [...inMemoryUsers];
 }
 
-export async function getReports(d1?: D1Database): Promise<Report[]> {
+export async function getReports(d1?: AnyD1Database): Promise<Report[]> {
   if (d1) {
     try {
       const db = drizzle(d1, { schema });
@@ -84,7 +84,7 @@ export async function getReports(d1?: D1Database): Promise<Report[]> {
 
 export async function createReport(
   input: { reporterId: string; reason: string },
-  d1?: D1Database,
+  d1?: AnyD1Database,
 ): Promise<Report> {
   const newReport: Report = {
     id: crypto.randomUUID(),
