@@ -69,72 +69,64 @@ pnpm --filter @et-chess/api dev
 ### Verification & Testing
 
 ```bash
-# Run Biome linter across the repository
+# Run Biome linter across the repository (0 errors)
 pnpm lint
 
-# Run TypeScript typechecks across all workspaces
+# Run TypeScript typechecks across all 9 workspaces (0 errors)
 pnpm typecheck
 
-# Execute Vitest test suites (240+ tests across monorepo)
+# Execute Vitest test suites (315 tests across 35 test suites, 100% passing)
 pnpm test
+
+# Build all production workspaces (web, admin, and @et-chess/api)
+pnpm build
 ```
 
 ---
 
-## ⚡ Version 2.0 Real-Time Architecture
+## ⚡ Real-Time Architecture & Hardened Security Boundary
 
-Version 2.0 delivers production-grade online multiplayer infrastructure powered by Cloudflare Workers and Durable Objects:
+ET-Chess delivers production-grade online multiplayer infrastructure powered by Cloudflare Workers and Durable Objects:
 
 - **Server-Authoritative Game Rooms (`GameRoomDO`)**:
+  - Authoritative chess clocks with millisecond precision, configurable time controls (Bullet, Blitz, Rapid), and move increments.
+  - Recalculating Durable Object alarms (`ctx.storage.setAlarm`) for exact timeout enforcement and disconnect grace periods.
   - Cloudflare WebSocket Hibernation API (`ctx.acceptWebSocket`) zeroing memory consumption between player moves.
-  - Strict turn enforcement, server-side legal move validation, resignations, draw agreements, and ping/pong heartbeats.
-  - 60-second disconnect grace alarm (`ctx.storage.setAlarm`) allowing seamless reconnection before forfeiture.
-  - D1 SQLite persistence of completed games with PGN records, outcome timestamps, and rating adjustments.
+  - Multi-connection management, reconnect state synchronization, and strict lifecycle states (`WAITING`, `ACTIVE`, `COMPLETED`, `ABORTED`).
+  - Exactly-once idempotent D1 SQLite persistence of completed games with PGN records, outcome timestamps, and rating adjustments.
+  - Direct authoritative match result reporting to `TournamentDO`.
 
 - **Ranked Matchmaking & Rating System (`MatchmakerDO`)**:
-  - Expanding rating window queue: initial base window of $\pm200$ Elo expanding by $+50$ Elo every 15 seconds.
+  - Durable in-memory queue with expanding rating window: initial base window of $\pm200$ Elo expanding by $+50$ Elo every 15 seconds.
   - Standard FIDE Elo rating calculation ($K=32$, floor of 100 Elo) atomically applied to player profiles.
   - WebSocket queue notification with real-time pairing and instant game room provisioning.
+  - Atomic reservation lifecycle preventing matchmaker double-pairing or queue dropouts.
 
 - **Friend Challenge Rooms**:
-  - 6-character alphanumeric room codes (`ABC12D`) with collision retry logic.
-  - Configurable time controls (Blitz, Rapid, Classical) and color preferences (White, Black, Random).
-  - Shareable join links and instant lobby ready-state synchronization.
+  - Cryptographically secure 6-character room codes (`ABC12D`) generated via `crypto.getRandomValues`.
+  - Configurable time controls and cryptographically uniform color assignment.
+  - Single-use, short-lived game tickets for WebSocket authentication, strictly validating participant identity.
 
 - **Single-Elimination Tournament Coordinator (`TournamentDO`)**:
   - Power-of-2 bracket sizing ($N = 2^{\lceil\log_2 P\rceil}$) with automatic bye advancement for odd player counts.
-  - Random and rating-based seeding strategies.
-  - Automated round-by-round progression, match provisioning, and champion crowning.
-  - Full interactive bracket visualization across Web and Mobile.
+  - Automatic `GameRoomDO` provisioning per scheduled match.
+  - Draw tiebreak resolution (higher seed advances).
+  - Automated round-by-round progression, finals match provisioning, and champion crowning.
 
-- **Authentication & User Profiles**:
-  - Better Auth integration with D1 SQLite persistence.
-  - Email/password authentication, session management, and guest fallback.
-  - Cross-platform auth modal and status indicator in Web, Mobile, and API middleware.
-
-- **Admin Visibility & Operations**:
-  - Real-time room inspection and active match monitoring.
-  - Tournament status tracking, bracket inspection, and participant metrics.
-  - Moderation queue with user infraction reports.
+- **Security & Abuse Protection**:
+  - Better Auth canonical `user.id` identity across all sensitive routes and WebSocket connections.
+  - Strict production secrets enforcement (`BETTER_AUTH_SECRET` minimum 32 characters or fatal boot error).
+  - WebSocket message size limit (16KB max payload) and safe Zod schema validation.
+  - Production error sanitization (no internal database errors or stack traces leaked to clients).
+  - Strict CORS allowlist matching configured production domains.
 
 ---
 
-## 🗺 Roadmap
+## 📜 Compliance & Third-Party Licenses
 
-- **v1.0 (Completed)**: 
-  - Monorepo architecture & shared packages (`chess-core`, `bot-engine`, `types`).
-  - Web and Expo mobile apps with local game loop, responsive board, move validation, sound, and theme styling.
-  - Bot integration with multi-tier difficulty levels (Beginner, Intermediate, Advanced, Master).
-  - Admin dashboard with Hono RPC integration.
-  - Cloudflare Workers REST API with D1 / Drizzle schema.
-- **v2.0 (Completed)**: 
-  - Real-time online play via Cloudflare Durable Objects & WebSockets (Hibernation API).
-  - Expanding-window rated matchmaking queue with FIDE Elo rating calculations.
-  - Friend-to-friend private challenge rooms with 6-char shareable invite codes.
-  - Single-elimination tournament coordinator with power-of-2 brackets and byes.
-  - Strict real-time protocol contract package (`@et-chess/realtime-protocol`).
-  - Better Auth authentication and player profile management.
-  - Admin monitoring dashboard for active rooms, tournaments, and live metrics.
+ET-Chess incorporates Stockfish (distributed under the GNU General Public License v3). Stockfish is isolated across process/Worker boundaries and communicates strictly over the standard text-based UCI protocol.
+
+Full licensing inventory, copyright attributions, and GPLv3 compliance details are documented in [docs/compliance/licenses.md](file:///Users/hunwork/Documents/Projects%20/ET-Chess/docs/compliance/licenses.md).
 
 ---
 

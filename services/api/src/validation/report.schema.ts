@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const createReportSchema = z.object({
-  reporterId: z.string().trim().min(1, 'reporterId is required'),
+  reporterId: z.string().trim().min(1).optional(),
   reason: z.string().trim().min(1, 'reason is required'),
 });
 

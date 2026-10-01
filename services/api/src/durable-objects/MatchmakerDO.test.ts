@@ -60,12 +60,17 @@ class MockResponse extends OriginalResponse {
 }
 (globalThis as unknown as Record<string, unknown>).Response = MockResponse;
 
-function createMockDOContext() {
+function createMockDOContext(sharedStorage = new Map<string, any>()) {
   let scheduledAlarm: number | null = null;
   const webSockets: MockWebSocket[] = [];
 
   const ctx: any = {
     storage: {
+      get: vi.fn(async <T>(key: string): Promise<T | undefined> => sharedStorage.get(key)),
+      put: vi.fn(async (key: string, val: any): Promise<void> => {
+        sharedStorage.set(key, val);
+      }),
+      delete: vi.fn(async (key: string): Promise<boolean> => sharedStorage.delete(key)),
       setAlarm: vi.fn(async (time: number) => {
         scheduledAlarm = time;
       }),
@@ -77,9 +82,16 @@ function createMockDOContext() {
     acceptWebSocket: vi.fn((ws: any) => {
       webSockets.push(ws);
     }),
+    getWebSockets: vi.fn((tag?: string) => {
+      if (!tag) return webSockets;
+      return webSockets.filter((ws) => {
+        const att = ws.deserializeAttachment();
+        return att?.userId === tag;
+      });
+    }),
   };
 
-  return { ctx, getScheduledAlarm: () => scheduledAlarm };
+  return { ctx, storage: sharedStorage, getScheduledAlarm: () => scheduledAlarm };
 }
 
 describe('MatchmakerDO (Queue Coordinator)', () => {
@@ -213,5 +225,105 @@ describe('MatchmakerDO (Queue Coordinator)', () => {
     const sent = JSON.parse(ws.sentMessages[0]!);
     expect(sent.type).toBe('queued');
     expect(sent.rating).toBe(1450);
+  });
+
+  it('persists queue state to DO storage and reconstructs queue across DO re-instantiation / restart', async () => {
+    const sharedStorage = new Map<string, any>();
+    const { ctx: ctx1 } = createMockDOContext(sharedStorage);
+    const mm1 = new MatchmakerDO(ctx1, mockEnv);
+
+    // Player 1 joins mm1
+    const req1 = new Request(
+      'https://example.com/matchmaking/queue?userId=user_survivor&displayName=Survivor&rating=1600',
+      { headers: { Upgrade: 'websocket' } },
+    );
+    await mm1.fetch(req1);
+
+    expect(mm1.getQueue()).toHaveLength(1);
+    expect(sharedStorage.has('matchmaking_queue')).toBe(true);
+
+    // Simulate DO eviction/restart: create new instance with same persistent storage
+    const { ctx: ctx2 } = createMockDOContext(sharedStorage);
+    const mm2 = new MatchmakerDO(ctx2, mockEnv);
+
+    // Queue endpoint fetches queue, triggering ensureLoaded
+    const reqInspect = new Request('https://example.com/matchmaking/queue', { method: 'GET' });
+    const resInspect = await mm2.fetch(reqInspect);
+    const data = (await resInspect.json()) as any;
+
+    expect(data.count).toBe(1);
+    expect(data.players[0].userId).toBe('user_survivor');
+    expect(data.players[0].rating).toBe(1600);
+    expect(data.players[0].status).toBe('QUEUED');
+  });
+
+  it('rolls back players from PROVISIONING to QUEUED if GameRoomDO initialization fails, preventing player loss', async () => {
+    // Mock GAME_ROOM DO binding that fails
+    const failingEnv: any = {
+      GAME_ROOM: {
+        idFromName: vi.fn(() => 'fail_room_id'),
+        get: vi.fn(() => ({
+          fetch: vi.fn(async () => new Response('Internal DO error', { status: 500 })),
+        })),
+      },
+    };
+
+    const mmFailing = new MatchmakerDO(mockCtx, failingEnv);
+
+    const p1 = {
+      userId: 'user_p1',
+      displayName: 'Player One',
+      rating: 1500,
+      joinedAt: 1000,
+    };
+    const p2 = {
+      userId: 'user_p2',
+      displayName: 'Player Two',
+      rating: 1550,
+      joinedAt: 1000,
+    };
+
+    mmFailing.setQueue([p1, p2]);
+    const matches = mmFailing.matchPlayers(1000);
+    expect(matches).toHaveLength(1);
+    expect(matches[0]!.reservationId).toBeDefined();
+
+    // Before dispatch: players are RESERVED in persistent queue entries
+    expect(mmFailing.getAllQueueEntries()[0]!.status).toBe('RESERVED');
+    expect(mmFailing.getAllQueueEntries()[1]!.status).toBe('RESERVED');
+
+    // Attempt dispatch with failing DO
+    await mmFailing.dispatchMatches(matches);
+
+    // Players MUST NOT be dropped from queue, and must be rolled back to QUEUED!
+    const queueAfter = mmFailing.getQueue();
+    expect(queueAfter).toHaveLength(2);
+    expect(queueAfter[0]!.status).toBe('QUEUED');
+    expect(queueAfter[0]!.reservationId).toBeNull();
+    expect(queueAfter[1]!.status).toBe('QUEUED');
+    expect(queueAfter[1]!.reservationId).toBeNull();
+  });
+
+  it('prevents duplicate queue entries for the same user', async () => {
+    const req1 = new Request(
+      'https://example.com/matchmaking/queue?userId=user_dup&displayName=Duplicate&rating=1300',
+      { headers: { Upgrade: 'websocket' } },
+    );
+    await matchmaker.fetch(req1);
+
+    expect(matchmaker.getQueue()).toHaveLength(1);
+
+    // Re-join with same userId
+    const req2 = new Request(
+      'https://example.com/matchmaking/queue?userId=user_dup&displayName=DuplicateUpdated&rating=1350',
+      { headers: { Upgrade: 'websocket' } },
+    );
+    await matchmaker.fetch(req2);
+
+    // Should still have only 1 player in queue, updated
+    const queue = matchmaker.getQueue();
+    expect(queue).toHaveLength(1);
+    expect(queue[0]!.displayName).toBe('DuplicateUpdated');
+    expect(queue[0]!.rating).toBe(1350);
   });
 });

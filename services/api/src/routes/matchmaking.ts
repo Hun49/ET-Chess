@@ -2,11 +2,17 @@ import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { Hono } from 'hono';
 import * as schema from '../db/schema';
+import { requireAdmin, requireAuth } from '../middleware/auth';
 import type { AppEnv } from '../types';
 
 export const matchmakingRoute = new Hono<AppEnv>()
-  // WebSocket upgrade to join matchmaking queue
-  .get('/queue', async (c) => {
+  // WebSocket upgrade to join matchmaking queue (requires authentication)
+  .get('/queue', requireAuth, async (c) => {
+    const user = c.get('user');
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
     if (!c.env?.MATCHMAKER) {
       return c.json({ error: 'Matchmaker Durable Object binding unavailable' }, 503);
     }
@@ -14,18 +20,12 @@ export const matchmakingRoute = new Hono<AppEnv>()
     const doId = c.env.MATCHMAKER.idFromName('global');
     const stub = c.env.MATCHMAKER.get(doId);
 
-    const url = new URL(c.req.url);
-    const userId = url.searchParams.get('userId') || c.var.user?.id;
-    let displayName = url.searchParams.get('displayName') || c.var.user?.name || 'Player';
-    let rating = url.searchParams.get('rating')
-      ? parseInt(url.searchParams.get('rating')!, 10)
-      : 1200;
+    const userId = user.id;
+    let displayName = user.name || 'Player';
+    let rating = 1200;
 
-    if (!userId) {
-      return c.json({ error: 'User ID is required to queue for matchmaking' }, 401);
-    }
-
-    if (c.env?.DB && !url.searchParams.get('rating')) {
+    // Derive canonical rating and displayName from server-side D1 profile
+    if (c.env?.DB) {
       try {
         const db = drizzle(c.env.DB, { schema });
         const [profile] = await db
@@ -34,13 +34,16 @@ export const matchmakingRoute = new Hono<AppEnv>()
           .where(eq(schema.profiles.userId, userId));
         if (profile) {
           rating = profile.rating;
-          displayName = profile.displayName || displayName;
+          if (profile.displayName) {
+            displayName = profile.displayName;
+          }
         }
-      } catch {
-        // Fallback to default
+      } catch (err) {
+        console.warn('Could not load user profile for matchmaking, falling back to defaults:', err);
       }
     }
 
+    const url = new URL(c.req.url);
     url.searchParams.set('userId', userId);
     url.searchParams.set('displayName', displayName);
     url.searchParams.set('rating', rating.toString());
@@ -49,27 +52,32 @@ export const matchmakingRoute = new Hono<AppEnv>()
     return stub.fetch(forwardRequest);
   })
 
-  // Leave matchmaking queue via HTTP POST
-  .post('/leave', async (c) => {
+  // Leave matchmaking queue via HTTP POST (requires authentication)
+  .post('/leave', requireAuth, async (c) => {
+    const user = c.get('user');
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
     if (!c.env?.MATCHMAKER) {
       return c.json({ error: 'Matchmaker Durable Object binding unavailable' }, 503);
     }
 
     const doId = c.env.MATCHMAKER.idFromName('global');
     const stub = c.env.MATCHMAKER.get(doId);
-    const body = await c.req.json().catch(() => ({}));
 
+    // Strictly enforce canonical authenticated user.id; completely ignore client body userId
     return stub.fetch(
       new Request('http://matchmaker/leave', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ userId: user.id }),
       }),
     );
   })
 
-  // Inspect matchmaking queue status
-  .get('/status', async (c) => {
+  // Inspect matchmaking queue status (restricted to admin users only)
+  .get('/status', requireAdmin, async (c) => {
     if (!c.env?.MATCHMAKER) {
       return c.json({ error: 'Matchmaker Durable Object binding unavailable' }, 503);
     }

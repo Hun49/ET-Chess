@@ -11,6 +11,19 @@ export function createAuth(
 ) {
   const db = customDb ?? (bindings?.DB ? drizzle(bindings.DB, { schema }) : null);
 
+  const isProduction = process.env.NODE_ENV === 'production';
+  const secret =
+    bindings?.BETTER_AUTH_SECRET ||
+    (isProduction ? '' : 'et-chess-dev-secret-super-secure-key-12345');
+
+  if (isProduction) {
+    if (!secret || secret.length < 32 || secret === 'et-chess-dev-secret-super-secure-key-12345') {
+      throw new Error(
+        'FATAL SECURITY ERROR: BETTER_AUTH_SECRET must be configured with at least 32 characters in production.',
+      );
+    }
+  }
+
   return betterAuth({
     database: drizzleAdapter(db ?? ({} as unknown as DrizzleD1Database<typeof schema>), {
       provider: 'sqlite',
@@ -21,7 +34,16 @@ export function createAuth(
         verification: schema.verification,
       },
     }),
-    secret: bindings?.BETTER_AUTH_SECRET || 'et-chess-dev-secret-super-secure-key-12345',
+    user: {
+      additionalFields: {
+        role: {
+          type: 'string',
+          defaultValue: 'user',
+          input: false,
+        },
+      },
+    },
+    secret,
     baseURL: bindings?.BETTER_AUTH_URL || 'http://localhost:8787',
     plugins: [expo()],
     trustedOrigins: ['etchess://', 'exp://', 'http://localhost:3000', 'http://localhost:8787'],

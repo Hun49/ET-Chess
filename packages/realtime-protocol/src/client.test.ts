@@ -84,7 +84,10 @@ describe('GameSocketClient', () => {
 
     MockSocket.instances[0]?.simulateServerMessage(createServerMessage.stateSync(mockGameState));
 
-    expect(onStateSync).toHaveBeenCalledWith(mockGameState);
+    expect(onStateSync).toHaveBeenCalledWith(
+      mockGameState,
+      expect.objectContaining({ type: 'state-sync', gameState: mockGameState }),
+    );
   });
 
   it('sends move, resignation, and draw offers correctly', async () => {

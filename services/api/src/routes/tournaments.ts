@@ -1,11 +1,13 @@
 import { zValidator } from '@hono/zod-validator';
-import { desc } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { Hono } from 'hono';
 import * as schema from '../db/schema';
 import { requireAuth } from '../middleware/auth';
 import type { AppEnv } from '../types';
 import { createTournamentSchema } from '../validation/tournament.schema';
+
+const tournamentHostsFallback = new Map<string, string>();
 
 export const tournamentsRoute = new Hono<AppEnv>()
   // List tournaments
@@ -39,6 +41,7 @@ export const tournamentsRoute = new Hono<AppEnv>()
       const body = c.req.valid('json');
       const user = c.var.user!;
       const tournamentId = `t_${crypto.randomUUID().slice(0, 8)}`;
+      tournamentHostsFallback.set(tournamentId, user.id);
 
       // Persist in D1
       if (c.env.DB) {
@@ -47,6 +50,7 @@ export const tournamentsRoute = new Hono<AppEnv>()
           id: tournamentId,
           roomId: tournamentId,
           name: body.name,
+          hostUserId: user.id,
           status: 'registering',
           createdAt: new Date(),
         });
@@ -60,7 +64,7 @@ export const tournamentsRoute = new Hono<AppEnv>()
         new Request('http://tournament/init', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: tournamentId, name: body.name }),
+          body: JSON.stringify({ id: tournamentId, name: body.name, hostUserId: user.id }),
         }),
       );
 
@@ -80,7 +84,12 @@ export const tournamentsRoute = new Hono<AppEnv>()
       return c.json(
         {
           success: true,
-          tournament: json.tournament || { id: tournamentId, name: body.name },
+          tournament: {
+            ...(json.tournament || {}),
+            id: tournamentId,
+            name: body.name,
+            hostUserId: user.id,
+          },
         },
         201,
       );
@@ -120,14 +129,42 @@ export const tournamentsRoute = new Hono<AppEnv>()
     );
   })
 
-  // Start tournament
+  // Start tournament (authorized host only)
   .post('/:id/start', requireAuth, async (c) => {
+    const user = c.var.user!;
     const tournamentId = c.req.param('id');
     if (!c.env?.TOURNAMENT) {
       return c.json({ error: 'Tournament Durable Object binding unavailable' }, 503);
     }
+
+    let hostUserId: string | null = null;
+    if (c.env.DB) {
+      const db = drizzle(c.env.DB, { schema });
+      const [row] = await db
+        .select()
+        .from(schema.tournaments)
+        .where(eq(schema.tournaments.id, tournamentId));
+      if (row?.hostUserId) {
+        hostUserId = row.hostUserId;
+      }
+    }
+
+    if (!hostUserId) {
+      hostUserId = tournamentHostsFallback.get(tournamentId) || null;
+    }
+
     const doId = c.env.TOURNAMENT.idFromName(tournamentId);
     const stub = c.env.TOURNAMENT.get(doId);
+
+    if (!hostUserId) {
+      const stateRes = await stub.fetch(new Request('http://tournament/state', { method: 'GET' }));
+      const state = (await stateRes.json().catch(() => ({}))) as any;
+      hostUserId = state?.tournament?.hostUserId || null;
+    }
+
+    if (hostUserId && hostUserId !== user.id && (user as any).role !== 'admin') {
+      return c.json({ error: 'Forbidden: Only the tournament host can start the tournament' }, 403);
+    }
 
     return stub.fetch(
       new Request('http://tournament/start', {
@@ -136,23 +173,9 @@ export const tournamentsRoute = new Hono<AppEnv>()
     );
   })
 
-  // Match result submission
+  // Match result submission - disabled for public clients
   .post('/:id/match-result', async (c) => {
-    const tournamentId = c.req.param('id');
-    if (!c.env?.TOURNAMENT) {
-      return c.json({ error: 'Tournament Durable Object binding unavailable' }, 503);
-    }
-    const body = await c.req.json().catch(() => ({}));
-    const doId = c.env.TOURNAMENT.idFromName(tournamentId);
-    const stub = c.env.TOURNAMENT.get(doId);
-
-    return stub.fetch(
-      new Request('http://tournament/match-result', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }),
-    );
+    return c.json({ error: 'Forbidden: Match results cannot be submitted by clients' }, 403);
   })
 
   // WebSocket proxy for live bracket updates

@@ -45,39 +45,27 @@ export function resetStore(): void {
 
 export async function getUsers(d1?: AnyD1Database): Promise<User[]> {
   if (d1) {
-    try {
-      const db = drizzle(d1, { schema });
-      const rows = await db.select().from(schema.users);
-      if (rows.length > 0) {
-        return rows.map((r) => ({
-          id: r.id,
-          displayName: r.displayName,
-          createdAt: r.createdAt,
-        }));
-      }
-    } catch {
-      // D1 query failed or not migrated, fallback to in-memory seed data
-    }
+    const db = drizzle(d1, { schema });
+    const rows = await db.select().from(schema.users);
+    return rows.map((r) => ({
+      id: r.id,
+      displayName: r.displayName,
+      createdAt: r.createdAt,
+    }));
   }
   return [...inMemoryUsers];
 }
 
 export async function getReports(d1?: AnyD1Database): Promise<Report[]> {
   if (d1) {
-    try {
-      const db = drizzle(d1, { schema });
-      const rows = await db.select().from(schema.reports);
-      if (rows.length > 0) {
-        return rows.map((r) => ({
-          id: r.id,
-          reporterId: r.reporterId,
-          reason: r.reason,
-          createdAt: r.createdAt,
-        }));
-      }
-    } catch {
-      // D1 query failed or not migrated, fallback to in-memory seed data
-    }
+    const db = drizzle(d1, { schema });
+    const rows = await db.select().from(schema.reports);
+    return rows.map((r) => ({
+      id: r.id,
+      reporterId: r.reporterId,
+      reason: r.reason,
+      createdAt: r.createdAt,
+    }));
   }
   return [...inMemoryReports];
 }
@@ -94,17 +82,14 @@ export async function createReport(
   };
 
   if (d1) {
-    try {
-      const db = drizzle(d1, { schema });
-      await db.insert(schema.reports).values({
-        id: newReport.id,
-        reporterId: newReport.reporterId,
-        reason: newReport.reason,
-        createdAt: newReport.createdAt,
-      });
-    } catch {
-      // D1 insert failed or not migrated, fallback to in-memory store
-    }
+    const db = drizzle(d1, { schema });
+    await db.insert(schema.reports).values({
+      id: newReport.id,
+      reporterId: newReport.reporterId,
+      reason: newReport.reason,
+      createdAt: newReport.createdAt,
+    });
+    return newReport;
   }
 
   inMemoryReports.push(newReport);

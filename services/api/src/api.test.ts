@@ -19,9 +19,20 @@ describe('ET-Chess API (@et-chess/api)', () => {
     });
   });
 
+  const adminHeaders = {
+    'x-test-user-id': 'admin_tester',
+    'x-test-user-role': 'admin',
+  };
+
+  const userHeaders = {
+    'x-test-user-id': 'usr_carlsen_2',
+  };
+
   describe('GET /reports', () => {
-    it('returns array of reports with 200 status code', async () => {
-      const res = await app.request('/reports');
+    it('returns array of reports with 200 status code for admin', async () => {
+      const res = await app.request('/reports', {
+        headers: adminHeaders,
+      });
       expect(res.status).toBe(200);
 
       const data = (await res.json()) as Report[];
@@ -38,7 +49,7 @@ describe('ET-Chess API (@et-chess/api)', () => {
   });
 
   describe('POST /reports', () => {
-    it('creates report and returns 201 with valid body', async () => {
+    it('creates report and returns 201 with valid body when authenticated', async () => {
       const newReportPayload = {
         reporterId: 'usr_carlsen_2',
         reason: 'Repeated intentional disconnections',
@@ -48,6 +59,7 @@ describe('ET-Chess API (@et-chess/api)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...userHeaders,
         },
         body: JSON.stringify(newReportPayload),
       });
@@ -60,35 +72,17 @@ describe('ET-Chess API (@et-chess/api)', () => {
       expect(data.createdAt).toBeDefined();
 
       // Verify subsequent GET returns the new report
-      const listRes = await app.request('/reports');
+      const listRes = await app.request('/reports', {
+        headers: adminHeaders,
+      });
       const listData = (await listRes.json()) as Report[];
       const createdInList = listData.find((r) => r.id === data.id);
       expect(createdInList).toBeDefined();
       expect(createdInList?.reason).toBe(newReportPayload.reason);
     });
 
-    it('returns 400 when reporterId is missing or empty', async () => {
-      const invalidPayload = {
-        reporterId: '',
-        reason: 'Some reason',
-      };
-
-      const res = await app.request('/reports', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(invalidPayload),
-      });
-
-      expect(res.status).toBe(400);
-      const data = (await res.json()) as { error: string };
-      expect(data).toBeDefined();
-    });
-
     it('returns 400 when reason is missing or empty', async () => {
       const invalidPayload = {
-        reporterId: 'usr_valid_id',
         reason: '   ',
       };
 
@@ -96,6 +90,7 @@ describe('ET-Chess API (@et-chess/api)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...userHeaders,
         },
         body: JSON.stringify(invalidPayload),
       });
@@ -108,6 +103,7 @@ describe('ET-Chess API (@et-chess/api)', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...userHeaders,
         },
         body: '{ malformed json',
       });
@@ -151,12 +147,18 @@ describe('ET-Chess API (@et-chess/api)', () => {
       const usersData = await usersRes.json();
       expect(Array.isArray(usersData)).toBe(true);
 
-      const postRes = await client.reports.$post({
-        json: {
-          reporterId: 'usr_kasparov_1',
-          reason: 'Engine score correlation 99%',
+      const postRes = await client.reports.$post(
+        {
+          json: {
+            reason: 'Engine score correlation 99%',
+          },
         },
-      });
+        {
+          headers: {
+            'x-test-user-id': 'usr_kasparov_1',
+          },
+        },
+      );
       expect([200, 201]).toContain(postRes.status);
     });
   });

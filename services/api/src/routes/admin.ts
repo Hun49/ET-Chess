@@ -3,9 +3,11 @@ import { drizzle } from 'drizzle-orm/d1';
 import { Hono } from 'hono';
 import { listRooms } from '../data/rooms-store';
 import * as schema from '../db/schema';
+import { requireAdmin } from '../middleware/auth';
 import type { AppEnv } from '../types';
 
 export const adminRoute = new Hono<AppEnv>()
+  .use('*', requireAdmin)
   // List online rooms
   .get('/rooms', async (c) => {
     const rooms = await listRooms(c.env?.DB);
@@ -25,7 +27,8 @@ export const adminRoute = new Hono<AppEnv>()
         .orderBy(desc(schema.tournaments.createdAt))
         .limit(50);
       return c.json({ tournaments }, 200);
-    } catch {
+    } catch (err) {
+      console.error('Failed to query tournaments from D1 in admin overview:', err);
       return c.json({ tournaments: [] }, 200);
     }
   })
@@ -47,8 +50,8 @@ export const adminRoute = new Hono<AppEnv>()
         activeTournaments = tourneys.filter(
           (t) => t.status === 'in-progress' || t.status === 'registering',
         ).length;
-      } catch {
-        // Fallback
+      } catch (err) {
+        console.error('Failed to query tournaments count from D1 in admin stats:', err);
       }
     }
 

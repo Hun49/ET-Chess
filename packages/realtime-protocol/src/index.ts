@@ -61,12 +61,20 @@ export const ClientMessage = z.discriminatedUnion('type', [
 // Server → Client Messages
 // ==========================================
 
+export const GameLifecycleSchema = z.enum(['WAITING', 'ACTIVE', 'COMPLETED', 'ABORTED']);
+
 export const ServerStateSyncMessage = z.object({
   type: z.literal('state-sync'),
   gameState: GameStateSchema,
   whitePlayer: PlayerInfoSchema.optional(),
   blackPlayer: PlayerInfoSchema.optional(),
   yourColor: PlayerColorSchema.optional(),
+  whiteRemainingMs: z.number().int().nonnegative().optional(),
+  blackRemainingMs: z.number().int().nonnegative().optional(),
+  activeClockColor: PlayerColorSchema.nullable().optional(),
+  lifecycleState: GameLifecycleSchema.optional(),
+  result: z.enum(['white', 'black', 'draw']).nullable().optional(),
+  terminationReason: z.string().nullable().optional(),
 });
 
 export const ServerOpponentDisconnectedMessage = z.object({
@@ -191,9 +199,13 @@ export const createClientMessage = {
 };
 
 export const createServerMessage = {
-  stateSync: (gameState: GameState): ServerStateSyncMessage => ({
+  stateSync: (
+    gameState: GameState,
+    extra?: Partial<Omit<ServerStateSyncMessage, 'type' | 'gameState'>>,
+  ): ServerStateSyncMessage => ({
     type: 'state-sync',
     gameState,
+    ...extra,
   }),
   opponentDisconnected: (gracePeriodMs: number): ServerOpponentDisconnectedMessage => ({
     type: 'opponent-disconnected',

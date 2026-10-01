@@ -21,6 +21,9 @@ export interface UseGameSocketOptions {
 export function useGameSocket(options: UseGameSocketOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [whiteRemainingMs, setWhiteRemainingMs] = useState<number | null>(null);
+  const [blackRemainingMs, setBlackRemainingMs] = useState<number | null>(null);
+  const [activeClockColor, setActiveClockColor] = useState<string | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
   const [opponentDisconnected, setOpponentDisconnected] = useState(false);
   const [gracePeriodSeconds, setGracePeriodSeconds] = useState<number | null>(null);
@@ -39,8 +42,17 @@ export function useGameSocket(options: UseGameSocketOptions) {
       onConnectionChange: (connected) => {
         setIsConnected(connected);
       },
-      onStateSync: (state) => {
+      onStateSync: (state, syncData) => {
         setGameState(state);
+        if (syncData?.whiteRemainingMs !== undefined) {
+          setWhiteRemainingMs(syncData.whiteRemainingMs);
+        }
+        if (syncData?.blackRemainingMs !== undefined) {
+          setBlackRemainingMs(syncData.blackRemainingMs);
+        }
+        if (syncData?.activeClockColor !== undefined) {
+          setActiveClockColor(syncData.activeClockColor);
+        }
         options.onStateSync?.(state);
       },
       onGameOver: (msg) => {
@@ -107,6 +119,9 @@ export function useGameSocket(options: UseGameSocketOptions) {
   return {
     isConnected,
     gameState,
+    whiteRemainingMs,
+    blackRemainingMs,
+    activeClockColor,
     gameOver,
     lastError,
     opponentDisconnected,

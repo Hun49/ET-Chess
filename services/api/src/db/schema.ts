@@ -32,6 +32,7 @@ export const user = sqliteTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: integer('emailVerified', { mode: 'boolean' }).notNull().default(false),
   image: text('image'),
+  role: text('role').notNull().default('user'),
   createdAt: integer('createdAt', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updatedAt', { mode: 'timestamp' }).notNull(),
 });
@@ -100,6 +101,8 @@ export const rooms = sqliteTable('rooms', {
   code: text('code').notNull().unique(),
   hostUserId: text('host_user_id').notNull(),
   guestUserId: text('guest_user_id'),
+  whiteUserId: text('white_user_id'),
+  blackUserId: text('black_user_id'),
   timeControlMinutes: integer('time_control_minutes').notNull().default(10),
   timeControlIncrement: integer('time_control_increment').notNull().default(0),
   hostColor: text('host_color', { enum: ['white', 'black', 'random'] })
@@ -115,6 +118,7 @@ export const rooms = sqliteTable('rooms', {
 export const games = sqliteTable('games', {
   id: text('id').primaryKey(),
   roomId: text('room_id'),
+  tournamentMatchId: text('tournament_match_id'),
   whiteUserId: text('white_user_id').notNull(),
   blackUserId: text('black_user_id').notNull(),
   finalFen: text('final_fen'),
@@ -128,10 +132,22 @@ export const games = sqliteTable('games', {
   endedAt: integer('ended_at', { mode: 'timestamp' }),
 });
 
+export const gameSettlements = sqliteTable('game_settlements', {
+  id: text('id').primaryKey(),
+  gameId: text('game_id').notNull().unique(),
+  whiteUserId: text('white_user_id').notNull(),
+  blackUserId: text('black_user_id').notNull(),
+  result: text('result', { enum: ['white', 'black', 'draw'] }).notNull(),
+  ratingDeltaWhite: integer('rating_delta_white').notNull(),
+  ratingDeltaBlack: integer('rating_delta_black').notNull(),
+  settledAt: integer('settled_at', { mode: 'timestamp' }).notNull(),
+});
+
 export const tournaments = sqliteTable('tournaments', {
   id: text('id').primaryKey(),
   roomId: text('room_id').notNull(),
   name: text('name').notNull(),
+  hostUserId: text('host_user_id'),
   status: text('status', { enum: ['registering', 'in-progress', 'finished'] })
     .notNull()
     .default('registering'),
@@ -149,6 +165,7 @@ export const tournamentMatches = sqliteTable('tournament_matches', {
   id: text('id').primaryKey(),
   tournamentId: text('tournament_id').notNull(),
   round: integer('round').notNull(),
+  matchIndex: integer('match_index'),
   player1UserId: text('player1_user_id'),
   player2UserId: text('player2_user_id'),
   gameId: text('game_id'),
@@ -167,3 +184,5 @@ export type TournamentParticipantTable = typeof tournamentParticipants.$inferSel
 export type InsertTournamentParticipant = typeof tournamentParticipants.$inferInsert;
 export type TournamentMatchTable = typeof tournamentMatches.$inferSelect;
 export type InsertTournamentMatch = typeof tournamentMatches.$inferInsert;
+export type GameSettlementTable = typeof gameSettlements.$inferSelect;
+export type InsertGameSettlement = typeof gameSettlements.$inferInsert;

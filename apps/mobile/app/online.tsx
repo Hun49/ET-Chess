@@ -1,4 +1,4 @@
-import type { Move, PlayerColor } from '@et-chess/types';
+import { type Move, type PlayerColor, SUPPORTED_TIME_CONTROLS } from '@et-chess/types';
 import { useRouter } from 'expo-router';
 import {
   AlertTriangle,
@@ -44,6 +44,44 @@ export interface RoomData {
   status: 'waiting' | 'ready' | 'active' | 'finished';
   whiteUserId?: string;
   blackUserId?: string;
+}
+
+export type MobileOnlineFlowState =
+  | 'IDLE'
+  | 'QUEUEING'
+  | 'MATCH_FOUND'
+  | 'ROOM_LOADING'
+  | 'ROOM_READY'
+  | 'CONNECTING'
+  | 'CONNECTED'
+  | 'IN_GAME'
+  | 'ERROR';
+
+export function computeMobileOnlineFlowState(params: {
+  error?: string | null;
+  queueError?: string | null;
+  lastError?: string | null;
+  isGameActive: boolean;
+  isQueueing: boolean;
+  roomStatus?: string | null;
+  hasMatchFound: boolean;
+  hasTicket: boolean;
+  isConnected: boolean;
+  hasGameState: boolean;
+}): MobileOnlineFlowState {
+  if (params.error || params.queueError || params.lastError) return 'ERROR';
+  if (!params.isGameActive) {
+    if (params.isQueueing) return 'QUEUEING';
+    if (params.roomStatus === 'ready') return 'ROOM_READY';
+    if (params.roomStatus === 'waiting') return 'ROOM_LOADING';
+    return 'IDLE';
+  }
+  if (!params.hasTicket) {
+    return params.hasMatchFound ? 'MATCH_FOUND' : 'ROOM_LOADING';
+  }
+  if (!params.isConnected) return 'CONNECTING';
+  if (params.isConnected && params.hasGameState) return 'IN_GAME';
+  return 'CONNECTED';
 }
 
 export default function OnlineScreen() {
@@ -341,16 +379,36 @@ export default function OnlineScreen() {
         ? 'black'
         : 'white';
 
+  const [ticket, setTicket] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!targetGameId || !isGameActive) {
+      setTicket(null);
+      return;
+    }
+    let active = true;
+    apiFetch<{ ticket: string }>(`/rooms/${targetGameId}/ticket`, { method: 'POST' })
+      .then((res) => {
+        if (active) setTicket(res.ticket);
+      })
+      .catch((err) => {
+        console.error('Failed to obtain game ticket:', err);
+      });
+    return () => {
+      active = false;
+    };
+  }, [targetGameId, isGameActive]);
+
   const wsUrl =
-    targetGameId && isGameActive
-      ? `${WS_BASE_URL}/rooms/${targetGameId}/websocket?userId=${encodeURIComponent(
-          currentUserId,
-        )}&displayName=${encodeURIComponent(displayName)}`
+    targetGameId && isGameActive && ticket
+      ? `${WS_BASE_URL}/rooms/${targetGameId}/websocket?ticket=${encodeURIComponent(ticket)}`
       : null;
 
   const {
     isConnected,
     gameState,
+    whiteRemainingMs,
+    blackRemainingMs,
     gameOver,
     lastError,
     opponentDisconnected,
@@ -359,7 +417,7 @@ export default function OnlineScreen() {
     resign,
     offerDraw,
   } = useGameSocket({
-    url: activeRoom?.status === 'active' ? wsUrl : null,
+    url: isGameActive ? wsUrl : null,
   });
 
   const activeGameState = gameState || {
@@ -370,6 +428,19 @@ export default function OnlineScreen() {
   };
 
   const isMyTurn = isConnected && activeGameState.turn === myColor;
+
+  const flowState = computeMobileOnlineFlowState({
+    error,
+    queueError,
+    lastError,
+    isGameActive,
+    isQueueing,
+    roomStatus: activeRoom?.status,
+    hasMatchFound: !!activeMatch,
+    hasTicket: !!ticket,
+    isConnected,
+    hasGameState: !!gameState,
+  });
 
   const handleMove = useCallback(
     (move: Move) => {
@@ -488,26 +559,21 @@ export default function OnlineScreen() {
 
               <Text style={styles.sectionLabel}>Time Control</Text>
               <View style={styles.presetGrid}>
-                {[
-                  { label: '3 min', min: 3, inc: 0 },
-                  { label: '5 min', min: 5, inc: 0 },
-                  { label: '10 min', min: 10, inc: 0 },
-                  { label: '3 + 2s', min: 3, inc: 2 },
-                  { label: '15 + 10s', min: 15, inc: 10 },
-                ].map((preset) => {
+                {SUPPORTED_TIME_CONTROLS.map((preset) => {
                   const selected =
-                    timeControlMinutes === preset.min && timeControlIncrement === preset.inc;
+                    timeControlMinutes === preset.minutes &&
+                    timeControlIncrement === preset.incrementSeconds;
                   return (
                     <Pressable
-                      key={preset.label}
+                      key={preset.id}
                       onPress={() => {
-                        setTimeControlMinutes(preset.min);
-                        setTimeControlIncrement(preset.inc);
+                        setTimeControlMinutes(preset.minutes);
+                        setTimeControlIncrement(preset.incrementSeconds);
                       }}
                       style={[styles.presetButton, selected && styles.presetButtonSelected]}
                     >
                       <Text style={[styles.presetText, selected && styles.presetTextSelected]}>
-                        {preset.label}
+                        {preset.name}
                       </Text>
                     </Pressable>
                   );

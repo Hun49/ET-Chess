@@ -119,16 +119,18 @@ describe('Tournaments Routes (/tournaments)', () => {
 
   it('POST /tournaments/:id/start forwards start command to TOURNAMENT DO', async () => {
     const mockStub = {
-      fetch: vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            success: true,
-            tournament: {
-              id: 't_mock',
-              status: 'in-progress',
-            },
-          }),
-        ),
+      fetch: vi.fn().mockImplementation(
+        () =>
+          new Response(
+            JSON.stringify({
+              success: true,
+              tournament: {
+                id: 't_mock',
+                status: 'in-progress',
+                hostUserId: hostUser.id,
+              },
+            }),
+          ),
       ),
     };
 

@@ -24,6 +24,7 @@ export interface TournamentMatch {
 export interface TournamentData {
   id: string;
   name: string;
+  hostUserId?: string;
   status: 'registering' | 'in-progress' | 'finished';
   participants: TournamentPlayer[];
   matches: TournamentMatch[];
@@ -113,12 +114,16 @@ export class TournamentDO {
       const body = (await request.json().catch(() => ({}))) as {
         id?: string;
         name?: string;
+        hostUserId?: string;
       };
       const data = await this.ensureLoaded(body.id, body.name);
       if (body.name) {
         data.name = body.name;
-        await this.saveData();
       }
+      if (body.hostUserId) {
+        data.hostUserId = body.hostUserId;
+      }
+      await this.saveData();
       return new Response(JSON.stringify({ tournament: data }), {
         headers: { 'Content-Type': 'application/json' },
       });
@@ -207,6 +212,14 @@ export class TournamentDO {
       // Generate single-elimination bracket
       this.generateInitialBracket(data);
       data.status = 'in-progress';
+
+      // Provision GameRoomDO for round 1 matches
+      for (const m of data.matches) {
+        if (m.status === 'scheduled' && m.player1 && m.player2) {
+          await this.provisionMatchGame(data, m);
+        }
+      }
+
       await this.saveData();
 
       // Persist to D1
@@ -235,7 +248,7 @@ export class TournamentDO {
       }
 
       // Check if all round 1 matches are already completed (e.g. byes)
-      this.checkRoundProgression(data);
+      await this.checkRoundProgression(data);
       await this.saveData();
 
       this.broadcastSync(data);
@@ -251,11 +264,12 @@ export class TournamentDO {
       const body = (await request.json().catch(() => ({}))) as {
         matchId?: string;
         gameId?: string;
-        winnerUserId?: string;
+        winnerUserId?: string | null;
+        result?: 'white' | 'black' | 'draw';
       };
 
-      if (!body.winnerUserId || (!body.matchId && !body.gameId)) {
-        return new Response(JSON.stringify({ error: 'Missing matchId/gameId or winnerUserId' }), {
+      if (!body.matchId && !body.gameId) {
+        return new Response(JSON.stringify({ error: 'Missing matchId or gameId' }), {
           status: 400,
           headers: { 'Content-Type': 'application/json' },
         });
@@ -272,24 +286,39 @@ export class TournamentDO {
         });
       }
 
+      if (body.matchId && body.gameId && match.gameId && match.gameId !== body.gameId) {
+        return new Response(JSON.stringify({ error: 'Mismatched gameId for match' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
       if (match.status === 'finished') {
         return new Response(JSON.stringify({ success: true, match, tournament: data }), {
           headers: { 'Content-Type': 'application/json' },
         });
       }
 
-      const winningPlayer =
+      let winningPlayer =
         match.player1?.userId === body.winnerUserId
           ? match.player1
           : match.player2?.userId === body.winnerUserId
             ? match.player2
             : null;
 
+      // In case of draw / tiebreak: higher seed advances
       if (!winningPlayer) {
-        return new Response(
-          JSON.stringify({ error: 'Winner must be one of the match participants' }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } },
-        );
+        if (body.result === 'draw' || body.winnerUserId === null) {
+          winningPlayer =
+            (match.player1?.seed ?? 999) <= (match.player2?.seed ?? 999)
+              ? match.player1
+              : match.player2;
+        } else {
+          return new Response(
+            JSON.stringify({ error: 'Winner must be one of the match participants' }),
+            { status: 400, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
       }
 
       match.winner = winningPlayer;
@@ -301,14 +330,14 @@ export class TournamentDO {
           const db = drizzle(this.env.DB, { schema });
           await db
             .update(schema.tournamentMatches)
-            .set({ winnerUserId: winningPlayer.userId })
+            .set({ winnerUserId: winningPlayer?.userId ?? null })
             .where(eq(schema.tournamentMatches.id, match.id));
         } catch (err) {
           console.warn('Could not update match result in D1:', err);
         }
       }
 
-      this.checkRoundProgression(data);
+      await this.checkRoundProgression(data);
       await this.saveData();
 
       this.broadcastSync(data);
@@ -376,7 +405,7 @@ export class TournamentDO {
   /**
    * Evaluates if the current round has finished, and spawns the next round matches or crowns champion.
    */
-  public checkRoundProgression(data: TournamentData): void {
+  public async checkRoundProgression(data: TournamentData): Promise<void> {
     if (data.status !== 'in-progress') return;
 
     const currentMatches = data.matches.filter((m) => m.round === data.currentRound);
@@ -394,12 +423,12 @@ export class TournamentDO {
       if (this.env.DB) {
         try {
           const db = drizzle(this.env.DB, { schema });
-          db.update(schema.tournaments)
+          await db
+            .update(schema.tournaments)
             .set({ status: 'finished' })
-            .where(eq(schema.tournaments.id, data.id))
-            .catch(() => {});
-        } catch {
-          // Ignored
+            .where(eq(schema.tournaments.id, data.id));
+        } catch (err) {
+          console.error('Failed to mark tournament finished in D1:', err);
         }
       }
       return;
@@ -407,6 +436,12 @@ export class TournamentDO {
 
     // Advance to next round
     const nextRound = data.currentRound + 1;
+
+    // Idempotency guard: prevent duplicate generation of next round matches
+    if (data.matches.some((m) => m.round === nextRound)) {
+      return;
+    }
+
     const nextMatches: TournamentMatch[] = [];
 
     // Pair winners of adjacent matches: Match 1 & 2 -> Next Match 1
@@ -436,26 +471,61 @@ export class TournamentDO {
     data.matches.push(...nextMatches);
     data.currentRound = nextRound;
 
+    for (const nm of nextMatches) {
+      if (nm.player1 && nm.player2) {
+        await this.provisionMatchGame(data, nm);
+      }
+    }
+
     // Persist new matches to D1
     if (this.env.DB) {
       try {
         const db = drizzle(this.env.DB, { schema });
         for (const nm of nextMatches) {
-          db.insert(schema.tournamentMatches)
-            .values({
-              id: nm.id,
-              tournamentId: data.id,
-              round: nm.round,
-              player1UserId: nm.player1?.userId ?? null,
-              player2UserId: nm.player2?.userId ?? null,
-              gameId: nm.gameId,
-              winnerUserId: null,
-            })
-            .catch(() => {});
+          await db.insert(schema.tournamentMatches).values({
+            id: nm.id,
+            tournamentId: data.id,
+            round: nm.round,
+            player1UserId: nm.player1?.userId ?? null,
+            player2UserId: nm.player2?.userId ?? null,
+            gameId: nm.gameId,
+            winnerUserId: null,
+          });
         }
-      } catch {
-        // Ignored
+      } catch (err) {
+        console.error('Failed to persist next round tournament matches in D1:', err);
       }
+    }
+  }
+
+  private async provisionMatchGame(data: TournamentData, match: TournamentMatch): Promise<void> {
+    if (!this.env?.GAME_ROOM || !match.gameId || !match.player1 || !match.player2) {
+      return;
+    }
+    try {
+      const doId = this.env.GAME_ROOM.idFromName(match.gameId);
+      const stub = this.env.GAME_ROOM.get(doId);
+      await stub.fetch(
+        new Request('http://game/init', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            gameId: match.gameId,
+            tournamentId: data.id,
+            matchId: match.id,
+            whiteUserId: match.player1.userId,
+            whiteDisplayName: match.player1.displayName,
+            blackUserId: match.player2.userId,
+            blackDisplayName: match.player2.displayName,
+            timeControlMinutes: 10,
+            timeControlIncrement: 0,
+            status: 'in-progress',
+          }),
+        }),
+      );
+      match.status = 'active';
+    } catch (err) {
+      console.warn(`Failed to provision GameRoomDO for tournament match ${match.id}:`, err);
     }
   }
 

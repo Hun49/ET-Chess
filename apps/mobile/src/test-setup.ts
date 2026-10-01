@@ -53,7 +53,10 @@ vi.mock('expo-secure-store', () => ({
 
 vi.mock('@better-auth/expo/client', () => ({
   expoClient: vi.fn(() => ({
-    id: 'expoClient',
+    id: 'expo',
+    getActions: () => ({
+      getCookie: vi.fn(async () => ''),
+    }),
   })),
 }));
 

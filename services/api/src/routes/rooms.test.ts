@@ -80,7 +80,9 @@ describe('Friend Challenge Rooms API (/rooms)', () => {
     const { room } = (await createRes.json()) as any;
 
     // 2. Fetch room
-    const getRes = await app.request(`/rooms/${room.id}`);
+    const getRes = await app.request(`/rooms/${room.id}`, {
+      headers: hostHeaders,
+    });
     expect(getRes.status).toBe(200);
     const getBody = (await getRes.json()) as any;
     expect(getBody.room.id).toBe(room.id);
@@ -88,8 +90,10 @@ describe('Friend Challenge Rooms API (/rooms)', () => {
     expect(getBody.room.hostColor).toBe('black');
   });
 
-  it('returns 404 for nonexistent room id', async () => {
-    const res = await app.request('/rooms/nonexistent-uuid-12345');
+  it('returns 404 for nonexistent room id when authenticated', async () => {
+    const res = await app.request('/rooms/nonexistent-uuid-12345', {
+      headers: hostHeaders,
+    });
     expect(res.status).toBe(404);
   });
 
@@ -196,5 +200,77 @@ describe('Friend Challenge Rooms API (/rooms)', () => {
     expect(calledBody.gameId).toBe(room.id);
     expect(calledBody.whiteUserId).toBe(hostUser.id);
     expect(calledBody.blackUserId).toBe(guestUser.id);
+  });
+
+  it('preserves assigned colors deterministically across multiple GET requests when hostColor is random', async () => {
+    // 1. Host creates room with random color
+    const createRes = await app.request('/rooms', {
+      method: 'POST',
+      headers: hostHeaders,
+      body: JSON.stringify({
+        timeControlMinutes: 5,
+        timeControlIncrement: 0,
+        hostColor: 'random',
+      }),
+    });
+    const { room } = (await createRes.json()) as any;
+
+    // 2. Guest joins
+    const joinRes = await app.request(`/rooms/${room.code}/join`, {
+      method: 'POST',
+      headers: guestHeaders,
+    });
+    const joinBody = (await joinRes.json()) as any;
+    const initialWhite = joinBody.room.whiteUserId;
+    const initialBlack = joinBody.room.blackUserId;
+
+    expect(initialWhite).toBeDefined();
+    expect(initialBlack).toBeDefined();
+    expect(initialWhite).not.toBe(initialBlack);
+
+    // 3. Make 20 subsequent GET requests and assert the colors NEVER change/flip
+    for (let i = 0; i < 20; i++) {
+      const getRes = await app.request(`/rooms/${room.id}`, {
+        headers: hostHeaders,
+      });
+      expect(getRes.status).toBe(200);
+      const getBody = (await getRes.json()) as any;
+      expect(getBody.room.whiteUserId).toBe(initialWhite);
+      expect(getBody.room.blackUserId).toBe(initialBlack);
+    }
+  });
+
+  it('throws and propagates database errors when D1 is bound instead of silently falling back', async () => {
+    // Mock failing D1 database
+    const failingD1: any = {
+      prepare: vi.fn(() => {
+        throw new Error('D1 storage unavailable / disk full');
+      }),
+      batch: vi.fn(async () => {
+        throw new Error('D1 transaction aborted');
+      }),
+      exec: vi.fn(async () => {
+        throw new Error('D1 exec failed');
+      }),
+    };
+
+    const res = await app.request(
+      '/rooms',
+      {
+        method: 'POST',
+        headers: hostHeaders,
+        body: JSON.stringify({
+          timeControlMinutes: 5,
+          timeControlIncrement: 0,
+          hostColor: 'white',
+        }),
+      },
+      {
+        DB: failingD1,
+      },
+    );
+
+    // Should return 500 error instead of silently falling back to in-memory success
+    expect(res.status).toBe(500);
   });
 });

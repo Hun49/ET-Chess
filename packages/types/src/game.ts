@@ -2,6 +2,8 @@ export type PlayerColor = 'white' | 'black';
 
 export type GameStatus = 'ongoing' | 'check' | 'checkmate' | 'stalemate' | 'draw';
 
+export type GameLifecycleState = 'WAITING' | 'ACTIVE' | 'COMPLETED' | 'ABORTED';
+
 export interface Move {
   from: string; // e.g. "e2" — algebraic square notation
   to: string; // e.g. "e4"

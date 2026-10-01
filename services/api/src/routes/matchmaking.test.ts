@@ -2,30 +2,23 @@ import { describe, expect, it, vi } from 'vitest';
 import app from '../index';
 
 describe('Matchmaking Routes (/matchmaking)', () => {
-  it('returns 503 if MATCHMAKER DO binding is missing', async () => {
-    const res = await app.request('/matchmaking/queue?userId=user_1');
+  it('returns 401 if unauthenticated for queue', async () => {
+    const res = await app.request('/matchmaking/queue');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 503 if authenticated but MATCHMAKER DO binding is missing', async () => {
+    const res = await app.request('/matchmaking/queue', {
+      headers: {
+        'x-test-user-id': 'user_1',
+      },
+    });
     expect(res.status).toBe(503);
     const body = (await res.json()) as any;
     expect(body.error).toContain('Matchmaker Durable Object binding unavailable');
   });
 
-  it('returns 401 if user ID is missing and unauthenticated', async () => {
-    const mockEnv = {
-      MATCHMAKER: {
-        idFromName: vi.fn().mockReturnValue('mock-id'),
-        get: vi.fn().mockReturnValue({
-          fetch: vi.fn(),
-        }),
-      },
-    };
-
-    const res = await app.request('/matchmaking/queue', {}, mockEnv as any);
-    expect(res.status).toBe(401);
-    const body = (await res.json()) as any;
-    expect(body.error).toContain('User ID is required');
-  });
-
-  it('forwards queue WebSocket request to MatchmakerDO when valid', async () => {
+  it('forwards queue WebSocket request to MatchmakerDO when valid and authenticated', async () => {
     const mockUpgradeRes = new Response(null, { status: 200 });
     Object.defineProperty(mockUpgradeRes, 'status', { value: 101 });
     const mockFetch = vi.fn().mockResolvedValue(mockUpgradeRes);
@@ -39,9 +32,13 @@ describe('Matchmaking Routes (/matchmaking)', () => {
     };
 
     const res = await app.request(
-      '/matchmaking/queue?userId=user_1&displayName=Alice&rating=1450',
+      '/matchmaking/queue',
       {
-        headers: { Upgrade: 'websocket' },
+        headers: {
+          Upgrade: 'websocket',
+          'x-test-user-id': 'user_1',
+          'x-test-user-name': 'Alice',
+        },
       },
       mockEnv as any,
     );
@@ -51,7 +48,7 @@ describe('Matchmaking Routes (/matchmaking)', () => {
     expect(mockFetch).toHaveBeenCalled();
   });
 
-  it('forwards leave request to MatchmakerDO', async () => {
+  it('forwards leave request to MatchmakerDO when authenticated', async () => {
     const mockFetch = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ ok: true, count: 0 }), {
         headers: { 'Content-Type': 'application/json' },
@@ -70,8 +67,11 @@ describe('Matchmaking Routes (/matchmaking)', () => {
       '/matchmaking/leave',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: 'user_1' }),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-user-id': 'user_1',
+        },
+        body: JSON.stringify({}),
       },
       mockEnv as any,
     );
@@ -81,7 +81,7 @@ describe('Matchmaking Routes (/matchmaking)', () => {
     expect(body.ok).toBe(true);
   });
 
-  it('forwards status request to MatchmakerDO', async () => {
+  it('forwards status request to MatchmakerDO when admin', async () => {
     const mockFetch = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ count: 2, players: [] }), {
         headers: { 'Content-Type': 'application/json' },
@@ -96,7 +96,16 @@ describe('Matchmaking Routes (/matchmaking)', () => {
       },
     };
 
-    const res = await app.request('/matchmaking/status', {}, mockEnv as any);
+    const res = await app.request(
+      '/matchmaking/status',
+      {
+        headers: {
+          'x-test-user-id': 'admin_1',
+          'x-test-user-role': 'admin',
+        },
+      },
+      mockEnv as any,
+    );
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
     expect(body.count).toBe(2);

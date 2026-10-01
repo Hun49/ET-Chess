@@ -1,4 +1,4 @@
-import * as SecureStore from 'expo-secure-store';
+import { getCookie } from './auth-client';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8787';
 export const WS_BASE_URL = API_BASE_URL.replace(/^http/, 'ws');
@@ -8,12 +8,12 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   const authHeaders: Record<string, string> = {};
   try {
-    const token = await SecureStore.getItemAsync('etchess_session_token');
-    if (token) {
-      authHeaders.Authorization = `Bearer ${token}`;
+    const cookie = await getCookie();
+    if (cookie) {
+      authHeaders.cookie = cookie;
     }
   } catch {
-    // Continue without token
+    // Continue without cookie
   }
 
   const res = await fetch(url, {
@@ -23,6 +23,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
       ...authHeaders,
       ...options.headers,
     },
+    credentials: 'include',
   });
 
   const data = await res.json().catch(() => ({}));

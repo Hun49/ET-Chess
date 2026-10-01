@@ -13,4 +13,11 @@ export const authClient = createAuthClient({
   ],
 });
 
+export const getCookie = async (): Promise<string> => {
+  if (typeof (authClient as any).getCookie === 'function') {
+    return (authClient as any).getCookie();
+  }
+  return '';
+};
+
 export const { signIn, signUp, signOut, useSession } = authClient;

@@ -1,7 +1,7 @@
 import type { GameState, PlayerColor } from '@et-chess/types';
-import { AlertTriangle, Flag, Handshake, Trophy, Users, Wifi, WifiOff } from 'lucide-react';
+import { AlertTriangle, Clock, Flag, Handshake, Trophy, Users, Wifi, WifiOff } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { WS_BASE_URL } from '../../lib/api-client';
+import { apiFetch, WS_BASE_URL } from '../../lib/api-client';
 import { ChessboardView } from '../board/ChessboardView';
 import { playMoveSound } from '../game/soundEffects';
 import { useGameSocket } from '../game/useGameSocket';
@@ -35,9 +35,26 @@ export function OnlineGameView({
 
   const opponentColor: PlayerColor = myColor === 'white' ? 'black' : 'white';
 
-  const wsUrl = `${WS_BASE_URL}/rooms/${targetGameId}/websocket?userId=${encodeURIComponent(
-    currentUserId,
-  )}&displayName=${encodeURIComponent(displayName)}`;
+  const [ticket, setTicket] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!targetGameId) return;
+    let active = true;
+    apiFetch<{ ticket: string }>(`/rooms/${targetGameId}/ticket`, { method: 'POST' })
+      .then((res) => {
+        if (active) setTicket(res.ticket);
+      })
+      .catch((err) => {
+        console.error('Failed to obtain game ticket:', err);
+      });
+    return () => {
+      active = false;
+    };
+  }, [targetGameId]);
+
+  const wsUrl = ticket
+    ? `${WS_BASE_URL}/rooms/${targetGameId}/websocket?ticket=${encodeURIComponent(ticket)}`
+    : null;
 
   const [localGameState, setLocalGameState] = useState<GameState | null>(null);
   const [countdownSeconds, setCountdownSeconds] = useState<number | null>(null);
@@ -50,6 +67,9 @@ export function OnlineGameView({
   const {
     isConnected,
     gameState,
+    whiteRemainingMs,
+    blackRemainingMs,
+    activeClockColor,
     gameOver,
     lastError,
     opponentDisconnected,
@@ -63,6 +83,17 @@ export function OnlineGameView({
     url: wsUrl,
     onStateSync: handleStateSync,
   });
+
+  const myRemainingMs = myColor === 'white' ? whiteRemainingMs : blackRemainingMs;
+  const oppRemainingMs = myColor === 'white' ? blackRemainingMs : whiteRemainingMs;
+
+  const formatClockTime = (ms: number | null | undefined): string => {
+    if (ms === null || ms === undefined) return '--:--';
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   // Keep localGameState synchronized with latest socket state
   useEffect(() => {
@@ -226,6 +257,45 @@ export function OnlineGameView({
 
         {/* Action Panel */}
         <div className="flex flex-col gap-4 p-5 rounded-2xl bg-surface-card border border-surface-border">
+          {/* Authoritative Match Clocks */}
+          <div className="flex flex-col gap-2 p-3 rounded-xl bg-surface-base border border-surface-border">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-300 mb-1">
+              <Clock className="w-3.5 h-3.5 text-board-light" />
+              <span>Authoritative Clock</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div
+                className={`p-2 rounded-lg text-center border transition-colors ${
+                  activeClockColor === opponentColor
+                    ? 'bg-board-dark/40 border-board-light text-board-light'
+                    : 'bg-surface-accent border-surface-border text-gray-400'
+                }`}
+              >
+                <div className="text-[10px] uppercase font-bold tracking-wider opacity-80">
+                  Opponent ({opponentColor})
+                </div>
+                <div className="text-lg font-mono font-black mt-0.5">
+                  {formatClockTime(oppRemainingMs)}
+                </div>
+              </div>
+
+              <div
+                className={`p-2 rounded-lg text-center border transition-colors ${
+                  activeClockColor === myColor
+                    ? 'bg-board-dark/40 border-board-light text-board-light'
+                    : 'bg-surface-accent border-surface-border text-gray-400'
+                }`}
+              >
+                <div className="text-[10px] uppercase font-bold tracking-wider opacity-80">
+                  You ({myColor})
+                </div>
+                <div className="text-lg font-mono font-black mt-0.5">
+                  {formatClockTime(myRemainingMs)}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
             <Users className="w-4 h-4 text-board-light" />
             <span>Match Actions</span>

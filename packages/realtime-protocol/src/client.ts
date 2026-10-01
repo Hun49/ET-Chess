@@ -6,12 +6,13 @@ import {
   type GameOverMessage,
   type OpponentDisconnectedMessage,
   type OpponentReconnectedMessage,
+  type ServerStateSyncMessage,
   safeParseServerMessage,
 } from './index';
 
 export interface GameSocketClientOptions {
   url: string;
-  onStateSync?: (state: GameState) => void;
+  onStateSync?: (state: GameState, syncData?: ServerStateSyncMessage) => void;
   onGameOver?: (msg: GameOverMessage) => void;
   onError?: (err: ErrorMessage) => void;
   onOpponentDisconnected?: (msg: OpponentDisconnectedMessage) => void;
@@ -68,7 +69,7 @@ export class GameSocketClient {
       const msg = parsed.data;
       switch (msg.type) {
         case 'state-sync':
-          this.options.onStateSync?.(msg.gameState);
+          this.options.onStateSync?.(msg.gameState, msg);
           break;
         case 'game-over':
           this.options.onGameOver?.(msg);

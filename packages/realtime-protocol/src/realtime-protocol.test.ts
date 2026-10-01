@@ -114,6 +114,9 @@ describe('Realtime Protocol Schema Contracts (packages/realtime-protocol)', () =
         whitePlayer: { id: 'p1', displayName: 'Alice', rating: 1350 },
         blackPlayer: { id: 'p2', displayName: 'Bob', rating: 1400 },
         yourColor: 'white',
+        whiteRemainingMs: 300000,
+        blackRemainingMs: 295000,
+        activeClockColor: 'black',
       };
       const serialized = serializeMessage(msg);
       const parsed = parseServerMessage(serialized);

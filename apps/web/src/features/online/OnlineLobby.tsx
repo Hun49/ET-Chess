@@ -1,4 +1,4 @@
-import type { PlayerColor } from '@et-chess/types';
+import { type PlayerColor, SUPPORTED_TIME_CONTROLS } from '@et-chess/types';
 import {
   Clock,
   LogIn,
@@ -319,23 +319,17 @@ export function OnlineLobby({
               <div className="mt-4">
                 <div className="block text-xs font-semibold text-gray-300 mb-2">Time Control</div>
                 <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { label: '3 min', min: 3, inc: 0 },
-                    { label: '5 min', min: 5, inc: 0 },
-                    { label: '10 min', min: 10, inc: 0 },
-                    { label: '3 + 2s', min: 3, inc: 2 },
-                    { label: '5 + 3s', min: 5, inc: 3 },
-                    { label: '15 + 10s', min: 15, inc: 10 },
-                  ].map((preset) => {
+                  {SUPPORTED_TIME_CONTROLS.map((preset) => {
                     const isSelected =
-                      timeControlMinutes === preset.min && timeControlIncrement === preset.inc;
+                      timeControlMinutes === preset.minutes &&
+                      timeControlIncrement === preset.incrementSeconds;
                     return (
                       <button
-                        key={preset.label}
+                        key={preset.id}
                         type="button"
                         onClick={() => {
-                          setTimeControlMinutes(preset.min);
-                          setTimeControlIncrement(preset.inc);
+                          setTimeControlMinutes(preset.minutes);
+                          setTimeControlIncrement(preset.incrementSeconds);
                         }}
                         className={`py-2 px-2.5 rounded-xl text-xs font-medium border transition-colors ${
                           isSelected
@@ -343,7 +337,7 @@ export function OnlineLobby({
                             : 'bg-surface-accent border-surface-border text-gray-300 hover:bg-surface-border'
                         }`}
                       >
-                        {preset.label}
+                        {preset.name}
                       </button>
                     );
                   })}

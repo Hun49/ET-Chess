@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { type AnyD1Database, drizzle } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
 import type { CreateRoomInput } from '../validation/room.schema';
@@ -29,8 +29,10 @@ const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 export function generateRoomCode(): string {
   let code = '';
+  const randomBytes = new Uint8Array(6);
+  crypto.getRandomValues(randomBytes);
   for (let i = 0; i < 6; i++) {
-    const randomIndex = Math.floor(Math.random() * CODE_ALPHABET.length);
+    const randomIndex = (randomBytes[i] ?? 0) % CODE_ALPHABET.length;
     code += CODE_ALPHABET[randomIndex];
   }
   return code;
@@ -47,7 +49,9 @@ export function determineColors(
   if (hostColor === 'black') {
     return { whiteUserId: guestUserId, blackUserId: hostUserId };
   }
-  const hostIsWhite = Math.random() < 0.5;
+  const randomBytes = new Uint8Array(1);
+  crypto.getRandomValues(randomBytes);
+  const hostIsWhite = ((randomBytes[0] ?? 0) & 1) === 0;
   return hostIsWhite
     ? { whiteUserId: hostUserId, blackUserId: guestUserId }
     : { whiteUserId: guestUserId, blackUserId: hostUserId };
@@ -75,41 +79,39 @@ export async function createRoom(
   };
 
   if (d1) {
-    try {
-      const db = drizzle(d1, { schema });
-      // Retry in rare event of code collision
-      let inserted = false;
-      for (let attempt = 0; attempt < 5; attempt++) {
-        try {
-          await db.insert(schema.rooms).values({
-            id: record.id,
-            code: record.code,
-            hostUserId: record.hostUserId,
-            guestUserId: record.guestUserId,
-            timeControlMinutes: record.timeControlMinutes,
-            timeControlIncrement: record.timeControlIncrement,
-            hostColor: record.hostColor,
-            kind: record.kind,
-            status: record.status,
-            createdAt: record.createdAt,
-          });
-          inserted = true;
-          break;
-        } catch (err: any) {
-          if (err?.message?.includes('UNIQUE constraint failed: rooms.code')) {
-            record.code = generateRoomCode();
-          } else {
-            throw err;
-          }
+    const db = drizzle(d1, { schema });
+    // Retry in rare event of code collision
+    let inserted = false;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        await db.insert(schema.rooms).values({
+          id: record.id,
+          code: record.code,
+          hostUserId: record.hostUserId,
+          guestUserId: record.guestUserId,
+          whiteUserId: record.whiteUserId ?? null,
+          blackUserId: record.blackUserId ?? null,
+          timeControlMinutes: record.timeControlMinutes,
+          timeControlIncrement: record.timeControlIncrement,
+          hostColor: record.hostColor,
+          kind: record.kind,
+          status: record.status,
+          createdAt: record.createdAt,
+        });
+        inserted = true;
+        break;
+      } catch (err: any) {
+        if (err?.message?.includes('UNIQUE constraint failed: rooms.code')) {
+          record.code = generateRoomCode();
+        } else {
+          throw err;
         }
       }
-      if (!inserted) {
-        throw new Error('Failed to generate unique room code');
-      }
-      return record;
-    } catch {
-      // Fallback to in-memory if D1 table not ready
     }
+    if (!inserted) {
+      throw new Error('Failed to generate unique room code');
+    }
+    return record;
   }
 
   inMemoryRooms.push(record);
@@ -118,35 +120,27 @@ export async function createRoom(
 
 export async function getRoomById(roomId: string, d1?: AnyD1Database): Promise<RoomRecord | null> {
   if (d1) {
-    try {
-      const db = drizzle(d1, { schema });
-      const rows = await db.select().from(schema.rooms).where(eq(schema.rooms.id, roomId)).limit(1);
+    const db = drizzle(d1, { schema });
+    const rows = await db.select().from(schema.rooms).where(eq(schema.rooms.id, roomId)).limit(1);
 
-      if (rows.length > 0) {
-        const r = rows[0]!;
-        const { whiteUserId, blackUserId } = r.guestUserId
-          ? determineColors(r.hostUserId, r.guestUserId, r.hostColor)
-          : { whiteUserId: undefined, blackUserId: undefined };
-
-        return {
-          id: r.id,
-          code: r.code,
-          hostUserId: r.hostUserId,
-          guestUserId: r.guestUserId,
-          timeControlMinutes: r.timeControlMinutes,
-          timeControlIncrement: r.timeControlIncrement,
-          hostColor: r.hostColor,
-          kind: r.kind,
-          status: r.status,
-          createdAt: r.createdAt,
-          whiteUserId,
-          blackUserId,
-        };
-      }
-      return null;
-    } catch {
-      // Fallback to in-memory
+    if (rows.length > 0) {
+      const r = rows[0]!;
+      return {
+        id: r.id,
+        code: r.code,
+        hostUserId: r.hostUserId,
+        guestUserId: r.guestUserId,
+        timeControlMinutes: r.timeControlMinutes,
+        timeControlIncrement: r.timeControlIncrement,
+        hostColor: r.hostColor,
+        kind: r.kind,
+        status: r.status,
+        createdAt: r.createdAt,
+        whiteUserId: r.whiteUserId ?? undefined,
+        blackUserId: r.blackUserId ?? undefined,
+      };
     }
+    return null;
   }
 
   const found = inMemoryRooms.find((r) => r.id === roomId);
@@ -157,33 +151,31 @@ export async function getRoomByCode(code: string, d1?: AnyD1Database): Promise<R
   const normalizedCode = code.trim().toUpperCase();
 
   if (d1) {
-    try {
-      const db = drizzle(d1, { schema });
-      const rows = await db
-        .select()
-        .from(schema.rooms)
-        .where(eq(schema.rooms.code, normalizedCode))
-        .limit(1);
+    const db = drizzle(d1, { schema });
+    const rows = await db
+      .select()
+      .from(schema.rooms)
+      .where(eq(schema.rooms.code, normalizedCode))
+      .limit(1);
 
-      if (rows.length > 0) {
-        const r = rows[0]!;
-        return {
-          id: r.id,
-          code: r.code,
-          hostUserId: r.hostUserId,
-          guestUserId: r.guestUserId,
-          timeControlMinutes: r.timeControlMinutes,
-          timeControlIncrement: r.timeControlIncrement,
-          hostColor: r.hostColor,
-          kind: r.kind,
-          status: r.status,
-          createdAt: r.createdAt,
-        };
-      }
-      return null;
-    } catch {
-      // Fallback
+    if (rows.length > 0) {
+      const r = rows[0]!;
+      return {
+        id: r.id,
+        code: r.code,
+        hostUserId: r.hostUserId,
+        guestUserId: r.guestUserId,
+        timeControlMinutes: r.timeControlMinutes,
+        timeControlIncrement: r.timeControlIncrement,
+        hostColor: r.hostColor,
+        kind: r.kind,
+        status: r.status,
+        createdAt: r.createdAt,
+        whiteUserId: r.whiteUserId ?? undefined,
+        blackUserId: r.blackUserId ?? undefined,
+      };
     }
+    return null;
   }
 
   const found = inMemoryRooms.find((r) => r.code === normalizedCode);
@@ -223,25 +215,27 @@ export async function joinRoom(
   };
 
   if (d1) {
-    try {
-      const db = drizzle(d1, { schema });
-      await db
-        .update(schema.rooms)
-        .set({
-          guestUserId,
-          status: 'ready',
-        })
-        .where(eq(schema.rooms.id, room.id));
-      return updated;
-    } catch {
-      // Fallback
-    }
+    const db = drizzle(d1, { schema });
+    await db
+      .update(schema.rooms)
+      .set({
+        guestUserId,
+        status: 'ready',
+        whiteUserId,
+        blackUserId,
+      })
+      .where(and(eq(schema.rooms.id, room.id), eq(schema.rooms.status, 'waiting')));
+    return updated;
   }
 
   const index = inMemoryRooms.findIndex((r) => r.id === room.id);
-  if (index !== -1) {
-    inMemoryRooms[index] = updated;
+  if (index === -1) {
+    throw new Error('Room not found');
   }
+  if (inMemoryRooms[index]!.status !== 'waiting') {
+    throw new Error('Room is not open for joining');
+  }
+  inMemoryRooms[index] = updated;
 
   return updated;
 }
@@ -256,8 +250,8 @@ export async function markRoomActive(
     throw new Error('Room not found');
   }
 
-  if (room.hostUserId !== requesterUserId && room.guestUserId !== requesterUserId) {
-    throw new Error('Unauthorized');
+  if (room.hostUserId !== requesterUserId) {
+    throw new Error('Forbidden: Only host can start the room');
   }
 
   if (room.status !== 'ready' && room.status !== 'active') {
@@ -270,13 +264,9 @@ export async function markRoomActive(
   };
 
   if (d1) {
-    try {
-      const db = drizzle(d1, { schema });
-      await db.update(schema.rooms).set({ status: 'active' }).where(eq(schema.rooms.id, room.id));
-      return updated;
-    } catch {
-      // Fallback
-    }
+    const db = drizzle(d1, { schema });
+    await db.update(schema.rooms).set({ status: 'active' }).where(eq(schema.rooms.id, room.id));
+    return updated;
   }
 
   const index = inMemoryRooms.findIndex((r) => r.id === room.id);
@@ -289,24 +279,22 @@ export async function markRoomActive(
 
 export async function listRooms(d1?: AnyD1Database): Promise<RoomRecord[]> {
   if (d1) {
-    try {
-      const db = drizzle(d1, { schema });
-      const rows = await db.select().from(schema.rooms).limit(50);
-      return rows.map((r) => ({
-        id: r.id,
-        code: r.code,
-        hostUserId: r.hostUserId,
-        guestUserId: r.guestUserId,
-        timeControlMinutes: r.timeControlMinutes,
-        timeControlIncrement: r.timeControlIncrement,
-        hostColor: r.hostColor,
-        kind: r.kind,
-        status: r.status,
-        createdAt: r.createdAt,
-      }));
-    } catch {
-      // Fallback to in-memory
-    }
+    const db = drizzle(d1, { schema });
+    const rows = await db.select().from(schema.rooms).limit(50);
+    return rows.map((r) => ({
+      id: r.id,
+      code: r.code,
+      hostUserId: r.hostUserId,
+      guestUserId: r.guestUserId,
+      timeControlMinutes: r.timeControlMinutes,
+      timeControlIncrement: r.timeControlIncrement,
+      hostColor: r.hostColor,
+      kind: r.kind,
+      status: r.status,
+      createdAt: r.createdAt,
+      whiteUserId: r.whiteUserId ?? undefined,
+      blackUserId: r.blackUserId ?? undefined,
+    }));
   }
   return [...inMemoryRooms].reverse();
 }
