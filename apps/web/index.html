@@ -4,8 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ET Chess</title>
+    <script>
+      (function(){try{var m=localStorage.getItem('et-chess-theme')||'system';var d=m==='system'?(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'):m;document.documentElement.setAttribute('data-theme',d);}catch(e){}})();
+    </script>
   </head>
-  <body class="bg-surface-base text-white antialiased">
+  <body class="bg-surface-base text-text-primary antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -1,6 +1,7 @@
 import { createRootRoute, Link, Outlet } from '@tanstack/react-router';
-import { GitBranch, Globe, LayoutGrid, Swords } from 'lucide-react';
+import { GitBranch, History, LayoutGrid, Swords, User } from 'lucide-react';
 import { AuthButton } from '../features/auth/AuthButton';
+import { ThemeToggle } from '../features/theme/ThemeToggle';
 
 export const rootRoute = createRootRoute({
   component: RootLayout,
@@ -8,7 +9,7 @@ export const rootRoute = createRootRoute({
 
 function RootLayout() {
   return (
-    <div className="min-h-screen bg-surface-base text-gray-100 flex flex-col font-sans selection:bg-board-dark selection:text-white">
+    <div className="min-h-screen bg-surface-base text-text-primary flex flex-col font-sans selection:bg-board-dark selection:text-white">
       <header className="border-b border-surface-border bg-surface-card/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link
@@ -20,14 +21,14 @@ function RootLayout() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-lg font-bold tracking-tight text-white group-hover:text-board-light transition-colors">
+                <span className="text-lg font-bold tracking-tight text-text-primary group-hover:text-board-light transition-colors">
                   ET Chess
                 </span>
                 <span className="text-[10px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-surface-accent border border-surface-border text-emerald-400">
                   v2.0
                 </span>
               </div>
-              <p className="text-[11px] text-gray-400 leading-none">Engine-Ready Local Chess</p>
+              <p className="text-[11px] text-text-muted leading-none">Engine-Ready Local Chess</p>
             </div>
           </Link>
 
@@ -35,11 +36,11 @@ function RootLayout() {
             <Link
               to="/"
               activeProps={{
-                className: 'bg-surface-accent text-white font-medium border-surface-border',
+                className: 'bg-surface-accent text-text-primary font-medium border-surface-border',
               }}
               inactiveProps={{
                 className:
-                  'text-gray-400 hover:text-white hover:bg-surface-accent/50 border-transparent',
+                  'text-text-muted hover:text-text-primary hover:bg-surface-accent/50 border-transparent',
               }}
               activeOptions={{ exact: true }}
               className="px-3 py-1.5 rounded-lg text-sm transition-all duration-150 border flex items-center gap-2"
@@ -49,37 +50,53 @@ function RootLayout() {
             </Link>
 
             <Link
-              to="/game"
-              search={{ mode: 'bot' }}
+              to="/play/online"
               activeProps={{
-                className: 'bg-surface-accent text-white font-medium border-surface-border',
+                className: 'bg-surface-accent text-text-primary font-medium border-surface-border',
               }}
               inactiveProps={{
                 className:
-                  'text-gray-400 hover:text-white hover:bg-surface-accent/50 border-transparent',
+                  'text-text-muted hover:text-text-primary hover:bg-surface-accent/50 border-transparent',
               }}
               className="px-3 py-1.5 rounded-lg text-sm transition-all duration-150 border flex items-center gap-2"
             >
-              <Swords className="w-4 h-4" />
-              <span>Game</span>
+              <Swords className="w-4 h-4 text-brand-green" />
+              <span>Play</span>
             </Link>
 
             <Link
-              to="/online"
+              to="/history"
               activeProps={{
-                className: 'bg-surface-accent text-white font-medium border-surface-border',
+                className: 'bg-surface-accent text-text-primary font-medium border-surface-border',
               }}
               inactiveProps={{
                 className:
-                  'text-gray-400 hover:text-white hover:bg-surface-accent/50 border-transparent',
+                  'text-text-muted hover:text-text-primary hover:bg-surface-accent/50 border-transparent',
               }}
               className="px-3 py-1.5 rounded-lg text-sm transition-all duration-150 border flex items-center gap-2"
             >
-              <Globe className="w-4 h-4 text-emerald-400" />
-              <span>Online</span>
+              <History className="w-4 h-4" />
+              <span>History</span>
+            </Link>
+
+            <Link
+              to="/profile"
+              activeProps={{
+                className: 'bg-surface-accent text-text-primary font-medium border-surface-border',
+              }}
+              inactiveProps={{
+                className:
+                  'text-text-muted hover:text-text-primary hover:bg-surface-accent/50 border-transparent',
+              }}
+              className="px-3 py-1.5 rounded-lg text-sm transition-all duration-150 border flex items-center gap-2"
+            >
+              <User className="w-4 h-4" />
+              <span>Profile</span>
             </Link>
 
             <div className="w-px h-5 bg-surface-border mx-1 sm:mx-2 hidden sm:block" />
+
+            <ThemeToggle />
 
             <AuthButton />
 
@@ -88,7 +105,7 @@ function RootLayout() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="GitHub Repository"
-              className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-surface-accent transition-colors flex items-center gap-1.5 text-xs font-medium border border-transparent hover:border-surface-border"
+              className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface-accent transition-colors flex items-center gap-1.5 text-xs font-medium border border-transparent hover:border-surface-border"
             >
               <GitBranch className="w-4 h-4" />
               <span className="hidden md:inline">GitHub</span>
@@ -102,7 +119,7 @@ function RootLayout() {
       </main>
 
       <footer className="border-t border-surface-border bg-surface-card/40 py-4 px-4 sm:px-6">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-text-muted">
           <div className="flex items-center gap-2">
             <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>Stockfish WASM Ready</span>

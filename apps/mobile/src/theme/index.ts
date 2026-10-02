@@ -1,28 +1,39 @@
-export const themeColors = {
-  board: {
-    light: '#f0d9b5',
-    dark: '#b58863',
-    highlight: 'rgba(255, 255, 0, 0.4)',
-    selected: 'rgba(20, 85, 30, 0.5)',
-  },
-  surface: {
-    base: '#121212',
-    card: '#1e1e1e',
-    accent: '#2a2a2a',
-    border: '#333333',
-  },
-  text: {
-    primary: '#ffffff',
-    secondary: '#d1d5db',
-    muted: '#9ca3af',
-    highlight: '#f0d9b5',
-  },
-  status: {
-    active: '#22c55e',
-    warning: '#f59e0b',
-    danger: '#ef4444',
-  },
-} as const;
+import {
+  board,
+  brand,
+  darkTheme,
+  lightTheme,
+  neutral,
+  type Theme,
+  type ThemeMode,
+} from '@et-chess/config';
+import { useColorScheme } from 'react-native';
+import { useThemeStore } from './themeStore';
+
+export { useThemeStore } from './themeStore';
+export type { Theme, ThemeMode };
+export { board, brand, darkTheme, lightTheme, neutral };
+
+/**
+ * Dynamic theme hook for React Native.
+ * Resolves current theme based on user preference ('light' | 'dark' | 'system')
+ * and the operating system's color scheme.
+ */
+export function useTheme(): Theme {
+  const systemColorScheme = useColorScheme();
+  const themeMode = useThemeStore((state) => state.themeMode);
+
+  if (themeMode === 'light') {
+    return lightTheme;
+  }
+  if (themeMode === 'dark') {
+    return darkTheme;
+  }
+  return systemColorScheme === 'light' ? lightTheme : darkTheme;
+}
+
+// Backward-compatibility alias pointing to dark theme
+export const themeColors = darkTheme;
 
 export const spacing = {
   xs: 4,
@@ -46,27 +57,22 @@ export const typography = {
   titleLarge: {
     fontSize: 28,
     fontWeight: '800' as const,
-    color: themeColors.text.primary,
     letterSpacing: -0.5,
   },
   titleMedium: {
     fontSize: 20,
     fontWeight: '700' as const,
-    color: themeColors.text.primary,
   },
   titleSmall: {
     fontSize: 16,
     fontWeight: '600' as const,
-    color: themeColors.text.primary,
   },
   bodyRegular: {
     fontSize: 14,
-    color: themeColors.text.secondary,
     lineHeight: 20,
   },
   bodySmall: {
     fontSize: 12,
-    color: themeColors.text.muted,
     lineHeight: 16,
   },
   badge: {

@@ -1,0 +1,46 @@
+/* ET Chess Design System Theme Variables — Generated from design-tokens.ts */
+:root {
+  --color-surface-base: #FFFFFF;
+  --color-surface-card: #F7F7F7;
+  --color-surface-accent: #EFEFEF;
+  --color-surface-border: #E5E5E5;
+  --color-text-primary: #1A1A1A;
+  --color-text-secondary: #4B5563;
+  --color-text-muted: #6B7280;
+  --color-text-highlight: #b58863;
+  --color-brand-green-light: #E6F4EA;
+  --color-brand-green: #078930;
+  --color-brand-green-dark: #055E23;
+  --color-brand-yellow-light: #FFF6CC;
+  --color-brand-yellow: #FCDD09;
+  --color-brand-yellow-dark: #854D0E;
+  --color-brand-red-light: #FBE3E4;
+  --color-brand-red: #DA121A;
+  --color-brand-red-dark: #A30D13;
+  --color-status-active: #16a34a;
+  --color-status-warning: #d97706;
+  --color-status-danger: #dc2626;
+}
+
+[data-theme="dark"] {
+  --color-surface-base: #121212;
+  --color-surface-card: #1E1E1E;
+  --color-surface-accent: #2a2a2a;
+  --color-surface-border: #333333;
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #D1D5DB;
+  --color-text-muted: #9CA3AF;
+  --color-text-highlight: #f0d9b5;
+  --color-brand-green-light: #E6F4EA;
+  --color-brand-green: #078930;
+  --color-brand-green-dark: #055E23;
+  --color-brand-yellow-light: #FFF6CC;
+  --color-brand-yellow: #FCDD09;
+  --color-brand-yellow-dark: #854D0E;
+  --color-brand-red-light: #FBE3E4;
+  --color-brand-red: #DA121A;
+  --color-brand-red-dark: #A30D13;
+  --color-status-active: #22c55e;
+  --color-status-warning: #f59e0b;
+  --color-status-danger: #ef4444;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeMobileOnlineFlowState } from '../app/online';
+import { computeMobileOnlineFlowState } from './features/online/onlineFlowState';
 
 describe('Phase 3 Deliverables D3.19 & D3.20 — Mobile Online Flow State Machine', () => {
   it('returns IDLE when not queueing and no active game or room', () => {

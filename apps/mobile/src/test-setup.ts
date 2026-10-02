@@ -62,31 +62,56 @@ vi.mock('@better-auth/expo/client', () => ({
 
 vi.mock('lucide-react-native', () => {
   const MockIcon = (props: Record<string, unknown>) => React.createElement('svg', props);
-  return {
-    ActivityIndicator: MockIcon,
-    ArrowLeft: MockIcon,
-    ArrowUpDown: MockIcon,
-    Bot: MockIcon,
-    Check: MockIcon,
-    ChevronRight: MockIcon,
-    CircleDot: MockIcon,
-    Cpu: MockIcon,
-    Eye: MockIcon,
-    Flag: MockIcon,
-    Handshake: MockIcon,
-    Info: MockIcon,
-    Lock: MockIcon,
-    Mail: MockIcon,
-    RefreshCw: MockIcon,
-    RotateCcw: MockIcon,
-    Settings: MockIcon,
-    Sparkles: MockIcon,
-    Swords: MockIcon,
-    Trophy: MockIcon,
-    User: MockIcon,
-    Users: MockIcon,
-    Volume2: MockIcon,
-  };
+  const icons = [
+    'ArrowLeft',
+    'ArrowUpDown',
+    'Bot',
+    'Check',
+    'CheckCircle2',
+    'ChevronRight',
+    'CircleDot',
+    'Clock',
+    'Copy',
+    'Cpu',
+    'Eye',
+    'Flag',
+    'Flame',
+    'Globe',
+    'Handshake',
+    'History',
+    'Info',
+    'Lock',
+    'Mail',
+    'Palette',
+    'Play',
+    'Profile',
+    'RotateCcw',
+    'Settings',
+    'Share2',
+    'Shield',
+    'Sparkles',
+    'Swords',
+    'Timer',
+    'Trash2',
+    'Trophy',
+    'Undo2',
+    'User',
+    'Users',
+    'Volume2',
+    'X',
+    'Zap',
+  ];
+  const target: Record<string, unknown> = { __esModule: true };
+  for (const icon of icons) {
+    target[icon] = MockIcon;
+  }
+  return new Proxy(target, {
+    get: (tgt, prop) => {
+      if (prop === '__esModule') return true;
+      if (prop === 'then') return undefined;
+      return (tgt as Record<string | symbol, unknown>)[prop] ?? MockIcon;
+    },
+  });
 });
 
 const mockPush = vi.fn();

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Lock, Mail, User } from 'lucide-react-native';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -14,10 +14,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { signIn, signUp } from '../src/lib/auth-client';
-import { borderRadius, spacing, themeColors, typography } from '../src/theme';
+import { borderRadius, spacing, type Theme, typography, useTheme } from '../src/theme';
 
 export default function AuthScreen() {
   const router = useRouter();
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -87,7 +89,7 @@ export default function AuthScreen() {
               accessibilityRole="button"
               accessibilityLabel="Back"
             >
-              <ArrowLeft size={20} color={themeColors.text.primary} />
+              <ArrowLeft size={20} color={theme.text.primary} />
             </Pressable>
             <Text style={styles.topBarTitle}>ET Chess Account</Text>
             <View style={styles.placeholder} />
@@ -149,12 +151,12 @@ export default function AuthScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.inputLabel}>Display Name</Text>
                 <View style={styles.inputWrapper}>
-                  <User size={18} color={themeColors.text.muted} style={styles.inputIcon} />
+                  <User size={18} color={theme.text.muted} style={styles.inputIcon} />
                   <TextInput
                     value={name}
                     onChangeText={setName}
                     placeholder="Grandmaster"
-                    placeholderTextColor={themeColors.text.muted}
+                    placeholderTextColor={theme.text.muted}
                     style={styles.textInput}
                     autoCapitalize="words"
                   />
@@ -165,12 +167,12 @@ export default function AuthScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email Address</Text>
               <View style={styles.inputWrapper}>
-                <Mail size={18} color={themeColors.text.muted} style={styles.inputIcon} />
+                <Mail size={18} color={theme.text.muted} style={styles.inputIcon} />
                 <TextInput
                   value={email}
                   onChangeText={setEmail}
                   placeholder="player@et-chess.com"
-                  placeholderTextColor={themeColors.text.muted}
+                  placeholderTextColor={theme.text.muted}
                   style={styles.textInput}
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -182,12 +184,12 @@ export default function AuthScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Password</Text>
               <View style={styles.inputWrapper}>
-                <Lock size={18} color={themeColors.text.muted} style={styles.inputIcon} />
+                <Lock size={18} color={theme.text.muted} style={styles.inputIcon} />
                 <TextInput
                   value={password}
                   onChangeText={setPassword}
                   placeholder="••••••••"
-                  placeholderTextColor={themeColors.text.muted}
+                  placeholderTextColor={theme.text.muted}
                   style={styles.textInput}
                   secureTextEntry
                   autoCapitalize="none"
@@ -207,7 +209,7 @@ export default function AuthScreen() {
               accessibilityRole="button"
             >
               {loading ? (
-                <ActivityIndicator color={themeColors.text.primary} size="small" />
+                <ActivityIndicator color={theme.text.primary} size="small" />
               ) : (
                 <Text style={styles.submitButtonText}>
                   {mode === 'signin' ? 'Sign In' : 'Create Account'}
@@ -221,159 +223,160 @@ export default function AuthScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: themeColors.surface.base,
-  },
-  keyboardContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxxl,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.md,
-    backgroundColor: themeColors.surface.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonPressed: {
-    opacity: 0.8,
-  },
-  topBarTitle: {
-    fontSize: typography.bodyRegular.fontSize,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-  },
-  placeholder: {
-    width: 36,
-  },
-  headerSection: {
-    alignItems: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.xl,
-  },
-  logoBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.lg,
-    backgroundColor: themeColors.board.dark,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  logoText: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: themeColors.text.primary,
-  },
-  title: {
-    fontSize: typography.titleLarge.fontSize,
-    fontWeight: typography.titleLarge.fontWeight,
-    color: themeColors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: typography.bodySmall.fontSize,
-    color: themeColors.text.muted,
-    textAlign: 'center',
-    paddingHorizontal: spacing.md,
-    lineHeight: typography.bodySmall.lineHeight,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: themeColors.surface.accent,
-    borderRadius: borderRadius.md,
-    padding: spacing.xs,
-    marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: themeColors.surface.border,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    borderRadius: borderRadius.sm,
-  },
-  tabButtonActive: {
-    backgroundColor: themeColors.surface.card,
-  },
-  tabButtonText: {
-    fontSize: typography.bodySmall.fontSize,
-    fontWeight: '600',
-    color: themeColors.text.muted,
-  },
-  tabButtonTextActive: {
-    color: themeColors.text.primary,
-  },
-  errorBanner: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderWidth: 1,
-    borderColor: themeColors.status.danger,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  errorText: {
-    color: '#fca5a5',
-    fontSize: typography.bodySmall.fontSize,
-  },
-  formSection: {
-    gap: spacing.lg,
-  },
-  inputGroup: {
-    gap: spacing.xs,
-  },
-  inputLabel: {
-    fontSize: typography.bodySmall.fontSize,
-    fontWeight: '500',
-    color: themeColors.text.secondary,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: themeColors.surface.card,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: themeColors.surface.border,
-    paddingHorizontal: spacing.md,
-  },
-  inputIcon: {
-    marginRight: spacing.sm,
-  },
-  textInput: {
-    flex: 1,
-    height: 48,
-    color: themeColors.text.primary,
-    fontSize: typography.bodyRegular.fontSize,
-  },
-  submitButton: {
-    backgroundColor: themeColors.board.dark,
-    height: 48,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: spacing.md,
-  },
-  submitButtonPressed: {
-    opacity: 0.85,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: themeColors.text.primary,
-    fontSize: typography.bodyRegular.fontSize,
-    fontWeight: '600',
-  },
-});
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.surface.base,
+    },
+    keyboardContainer: {
+      flex: 1,
+    },
+    scrollContent: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xxxl,
+    },
+    topBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.md,
+    },
+    backButton: {
+      width: 36,
+      height: 36,
+      borderRadius: borderRadius.md,
+      backgroundColor: theme.surface.accent,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    backButtonPressed: {
+      opacity: 0.8,
+    },
+    topBarTitle: {
+      fontSize: typography.bodyRegular.fontSize,
+      fontWeight: '600',
+      color: theme.text.primary,
+    },
+    placeholder: {
+      width: 36,
+    },
+    headerSection: {
+      alignItems: 'center',
+      marginTop: spacing.xl,
+      marginBottom: spacing.xl,
+    },
+    logoBadge: {
+      width: 56,
+      height: 56,
+      borderRadius: borderRadius.lg,
+      backgroundColor: theme.board.dark,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.lg,
+    },
+    logoText: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: theme.text.primary,
+    },
+    title: {
+      fontSize: typography.titleLarge.fontSize,
+      fontWeight: typography.titleLarge.fontWeight,
+      color: theme.text.primary,
+      marginBottom: spacing.xs,
+    },
+    subtitle: {
+      fontSize: typography.bodySmall.fontSize,
+      color: theme.text.muted,
+      textAlign: 'center',
+      paddingHorizontal: spacing.md,
+      lineHeight: typography.bodySmall.lineHeight,
+    },
+    tabContainer: {
+      flexDirection: 'row',
+      backgroundColor: theme.surface.accent,
+      borderRadius: borderRadius.md,
+      padding: spacing.xs,
+      marginBottom: spacing.lg,
+      borderWidth: 1,
+      borderColor: theme.surface.border,
+    },
+    tabButton: {
+      flex: 1,
+      paddingVertical: spacing.sm,
+      alignItems: 'center',
+      borderRadius: borderRadius.sm,
+    },
+    tabButtonActive: {
+      backgroundColor: theme.surface.card,
+    },
+    tabButtonText: {
+      fontSize: typography.bodySmall.fontSize,
+      fontWeight: '600',
+      color: theme.text.muted,
+    },
+    tabButtonTextActive: {
+      color: theme.text.primary,
+    },
+    errorBanner: {
+      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+      borderWidth: 1,
+      borderColor: theme.status.danger,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    errorText: {
+      color: '#fca5a5',
+      fontSize: typography.bodySmall.fontSize,
+    },
+    formSection: {
+      gap: spacing.lg,
+    },
+    inputGroup: {
+      gap: spacing.xs,
+    },
+    inputLabel: {
+      fontSize: typography.bodySmall.fontSize,
+      fontWeight: '500',
+      color: theme.text.secondary,
+    },
+    inputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.surface.card,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.surface.border,
+      paddingHorizontal: spacing.md,
+    },
+    inputIcon: {
+      marginRight: spacing.sm,
+    },
+    textInput: {
+      flex: 1,
+      height: 48,
+      color: theme.text.primary,
+      fontSize: typography.bodyRegular.fontSize,
+    },
+    submitButton: {
+      backgroundColor: theme.board.dark,
+      height: 48,
+      borderRadius: borderRadius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: spacing.md,
+    },
+    submitButtonPressed: {
+      opacity: 0.85,
+    },
+    submitButtonDisabled: {
+      opacity: 0.6,
+    },
+    submitButtonText: {
+      color: theme.text.primary,
+      fontSize: typography.bodyRegular.fontSize,
+      fontWeight: '600',
+    },
+  });

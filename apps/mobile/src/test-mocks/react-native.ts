@@ -122,6 +122,8 @@ export const useWindowDimensions = () => ({
   fontScale: 1,
 });
 
+export const useColorScheme = (): 'light' | 'dark' | null | undefined => 'dark';
+
 export const Dimensions = {
   get: () => ({ width: 390, height: 844, scale: 3, fontScale: 1 }),
   addEventListener: () => ({ remove: () => {} }),
@@ -169,6 +171,7 @@ export default {
   Modal,
   ActivityIndicator,
   useWindowDimensions,
+  useColorScheme,
   Dimensions,
   Platform,
   NativeModules,

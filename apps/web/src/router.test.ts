@@ -2,16 +2,41 @@ import { describe, expect, it } from 'vitest';
 import { router, routeTree } from './router';
 import { rootRoute } from './routes/__root';
 import { gameRoute, parseGameSearchParams } from './routes/game';
+import { historyRoute } from './routes/history';
 import { indexRoute } from './routes/index';
+import { playComputerRoute } from './routes/play.computer';
+import { playFriendRoute } from './routes/play.friend';
+import { playLocalRoute } from './routes/play.local';
+import { playOnlineRoute } from './routes/play.online';
+import { profileRoute } from './routes/profile';
 
 describe('apps/web routing tree', () => {
-  it('registers root, index (/), and game (/game) routes correctly', () => {
+  it('registers all 4 play modes and app routes correctly', () => {
     expect(rootRoute).toBeDefined();
     expect(indexRoute).toBeDefined();
-    expect(gameRoute).toBeDefined();
     expect(indexRoute.fullPath).toBe('/');
+
+    expect(playOnlineRoute).toBeDefined();
+    expect(playOnlineRoute.fullPath).toBe('/play/online');
+
+    expect(playFriendRoute).toBeDefined();
+    expect(playFriendRoute.fullPath).toBe('/play/friend');
+
+    expect(playComputerRoute).toBeDefined();
+    expect(playComputerRoute.fullPath).toBe('/play/computer');
+
+    expect(playLocalRoute).toBeDefined();
+    expect(playLocalRoute.fullPath).toBe('/play/local');
+
+    expect(gameRoute).toBeDefined();
     expect(gameRoute.fullPath).toBe('/game');
-    expect(gameRoute.path).toBe('game');
+
+    expect(historyRoute).toBeDefined();
+    expect(historyRoute.fullPath).toBe('/history');
+
+    expect(profileRoute).toBeDefined();
+    expect(profileRoute.fullPath).toBe('/profile');
+
     expect(routeTree).toBeDefined();
     expect(router).toBeDefined();
   });

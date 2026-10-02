@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { fetchHealth } from '../api/client';
 
+import { ThemeToggle } from '../features/theme/ThemeToggle';
+
 export const rootRoute = createRootRoute({
   component: RootLayout,
 });
@@ -29,7 +31,7 @@ export function RootLayout() {
   });
 
   return (
-    <div className="min-h-screen bg-surface-base text-gray-100 flex flex-col font-sans selection:bg-board-dark selection:text-white antialiased">
+    <div className="min-h-screen bg-surface-base text-text-primary flex flex-col font-sans selection:bg-board-dark selection:text-white antialiased">
       {/* Top Navbar */}
       <header className="h-16 border-b border-surface-border bg-surface-card/90 backdrop-blur-md sticky top-0 z-50 px-4 sm:px-6 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -86,6 +88,8 @@ export function RootLayout() {
           <span className="text-[11px] font-mono px-2 py-1 rounded bg-surface-accent/60 border border-surface-border text-gray-300 hidden sm:inline-block">
             v1.0
           </span>
+
+          <ThemeToggle />
 
           <a
             href="/"

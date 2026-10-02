@@ -4,106 +4,175 @@ import {
   ChevronRight,
   Cpu,
   Globe,
+  History,
   Settings,
   Sparkles,
   Swords,
   User,
   Users,
 } from 'lucide-react-native';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { borderRadius, spacing, themeColors, typography } from '../src/theme';
+import { borderRadius, spacing, type Theme, typography, useTheme } from '../src/theme';
 
 export default function HomeScreen() {
   const router = useRouter();
-
-  const handlePlayOnline = () => {
-    router.push('/online');
-  };
-
-  const handlePlayBot = () => {
-    router.push({ pathname: '/game', params: { mode: 'bot' } });
-  };
-
-  const handlePassAndPlay = () => {
-    router.push({ pathname: '/game', params: { mode: 'local' } });
-  };
-
-  const handleOpenSettings = () => {
-    router.push('/settings');
-  };
+  const theme = useTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Top Actions: Account & Settings */}
+        {/* Top Actions: History, Account & Settings */}
         <View style={styles.topActionsRow}>
           <Pressable
-            onPress={() => router.push('/auth')}
+            onPress={() => router.push('/history')}
             style={({ pressed }) => [
               styles.topActionButton,
               pressed && styles.topActionButtonPressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Account"
+            accessibilityLabel="Match History"
+            testID="top-history-btn"
           >
-            <User size={15} color={themeColors.text.primary} />
-            <Text style={styles.topActionText}>Account</Text>
+            <History size={15} color={theme.text.primary} />
+            <Text style={styles.topActionText}>History</Text>
           </Pressable>
 
           <Pressable
-            onPress={handleOpenSettings}
+            onPress={() => router.push('/profile')}
+            style={({ pressed }) => [
+              styles.topActionButton,
+              pressed && styles.topActionButtonPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Profile"
+            testID="top-profile-btn"
+          >
+            <User size={15} color={theme.text.primary} />
+            <Text style={styles.topActionText}>Profile</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push('/settings')}
             style={({ pressed }) => [
               styles.topActionButton,
               pressed && styles.topActionButtonPressed,
             ]}
             accessibilityRole="button"
             accessibilityLabel="Settings"
+            testID="top-settings-btn"
           >
-            <Settings size={15} color={themeColors.text.primary} />
+            <Settings size={15} color={theme.text.primary} />
             <Text style={styles.topActionText}>Settings</Text>
           </Pressable>
         </View>
 
-        {/* Header / Brand Hero */}
+        {/* Brand Hero */}
         <View style={styles.heroSection}>
           <View style={styles.badgeContainer}>
-            <Sparkles size={14} color={themeColors.board.light} />
-            <Text style={styles.badgeText}>Minimalist Chess Experience</Text>
+            <Sparkles size={14} color={theme.brand.green.DEFAULT} />
+            <Text style={styles.badgeText}>The Ethiopian Chess Platform</Text>
           </View>
           <Text style={styles.title}>ET Chess</Text>
           <Text style={styles.subtitle}>
-            Master every position. Challenge local Stockfish offline or play head-to-head on this
-            device.
+            Play ranked games online, invite friends, or train against the Stockfish engine.
           </Text>
         </View>
 
-        {/* Game Mode Selection Cards */}
+        {/* 4 Direct Mode Selection Cards */}
         <View style={styles.cardContainer}>
-          {/* Card 1: Play vs Bot */}
-          <Pressable
-            style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-            onPress={handlePlayBot}
+          {/* Card 1: Play Online */}
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => router.push('/play-online')}
             accessibilityRole="button"
-            accessibilityLabel="Play vs Bot"
+            accessibilityLabel="Play Online"
+            testID="home-card-online"
           >
             <View style={styles.cardHeader}>
-              <View style={styles.botIconWrapper}>
-                <Bot size={26} color={themeColors.board.light} />
+              <View style={[styles.iconWrapper, styles.onlineIconWrapper]}>
+                <Globe size={24} color={theme.brand.green.DEFAULT} />
               </View>
               <View style={styles.tagBadge}>
-                <Cpu size={12} color={themeColors.board.light} />
-                <Text style={styles.tagText}>Stockfish Engine</Text>
+                <Text style={[styles.tagText, { color: theme.brand.green.DEFAULT }]}>
+                  Live Ranked
+                </Text>
               </View>
             </View>
 
             <View style={styles.cardBody}>
-              <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>Play vs Bot</Text>
-                <View style={styles.levelTag}>
-                  <Text style={styles.levelTagText}>Depth 10</Text>
-                </View>
+              <Text style={styles.cardTitle}>Play Online</Text>
+              <Text style={styles.cardDescription}>
+                Instant matchmaking with rating expansion. Play Bullet, Blitz, and Rapid chess
+                against rated opponents.
+              </Text>
+            </View>
+
+            <View style={styles.cardFooter}>
+              <Text style={[styles.footerActionText, { color: theme.brand.green.DEFAULT }]}>
+                Find Match
+              </Text>
+              <ChevronRight size={18} color={theme.brand.green.DEFAULT} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Card 2: Play a Friend */}
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => router.push('/play-friend')}
+            accessibilityRole="button"
+            accessibilityLabel="Play a Friend"
+            testID="home-card-friend"
+          >
+            <View style={styles.cardHeader}>
+              <View style={[styles.iconWrapper, styles.friendIconWrapper]}>
+                <Users size={24} color={theme.brand.yellow.dark} />
               </View>
+              <View style={styles.tagBadge}>
+                <Text style={[styles.tagText, { color: theme.brand.yellow.dark }]}>
+                  Invite Code
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.cardBody}>
+              <Text style={styles.cardTitle}>Play a Friend</Text>
+              <Text style={styles.cardDescription}>
+                Share a challenge code or link and play head-to-head with friends with custom
+                clocks.
+              </Text>
+            </View>
+
+            <View style={styles.cardFooter}>
+              <Text style={[styles.footerActionText, { color: theme.brand.yellow.dark }]}>
+                Create Challenge
+              </Text>
+              <ChevronRight size={18} color={theme.brand.yellow.dark} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Card 3: Play vs Bot */}
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => router.push('/play-computer')}
+            accessibilityRole="button"
+            accessibilityLabel="Play vs Computer"
+            testID="home-card-computer"
+          >
+            <View style={styles.cardHeader}>
+              <View style={[styles.iconWrapper, styles.botIconWrapper]}>
+                <Bot size={24} color={theme.board.light} />
+              </View>
+              <View style={styles.tagBadge}>
+                <Cpu size={12} color={theme.board.light} />
+                <Text style={styles.tagText}>Stockfish WASM</Text>
+              </View>
+            </View>
+
+            <View style={styles.cardBody}>
+              <Text style={styles.cardTitle}>Play Computer</Text>
               <Text style={styles.cardDescription}>
                 Battle Stockfish with zero latency. Configurable skill levels from casual beginner
                 to master tier.
@@ -112,342 +181,217 @@ export default function HomeScreen() {
 
             <View style={styles.cardFooter}>
               <Text style={styles.footerActionText}>Start Engine Match</Text>
-              <ChevronRight size={18} color={themeColors.board.light} />
+              <ChevronRight size={18} color={theme.board.light} />
             </View>
-          </Pressable>
+          </TouchableOpacity>
 
-          {/* Card 2: Pass and Play */}
-          <Pressable
-            style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-            onPress={handlePassAndPlay}
+          {/* Card 4: Pass & Play */}
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => router.push('/play-local')}
             accessibilityRole="button"
             accessibilityLabel="Pass and Play"
+            testID="home-card-local"
           >
             <View style={styles.cardHeader}>
-              <View style={styles.usersIconWrapper}>
-                <Users size={26} color={themeColors.text.primary} />
+              <View style={[styles.iconWrapper, styles.localIconWrapper]}>
+                <Swords size={24} color={theme.text.primary} />
               </View>
-              <View style={styles.localTagBadge}>
-                <Swords size={12} color={themeColors.text.secondary} />
-                <Text style={styles.localTagText}>Over-the-Board</Text>
+              <View style={styles.tagBadge}>
+                <Text style={styles.tagText}>1 Device</Text>
               </View>
             </View>
 
             <View style={styles.cardBody}>
-              <View style={styles.cardTitleRow}>
-                <Text style={styles.cardTitle}>Pass and Play</Text>
-                <View style={styles.levelTag}>
-                  <Text style={styles.levelTagText}>2 Players</Text>
-                </View>
-              </View>
+              <Text style={styles.cardTitle}>Pass and Play</Text>
               <Text style={styles.cardDescription}>
-                Play head-to-head with a companion on the same screen. Full legal move validation
-                and auto-flipping.
+                Play head-to-head on this screen. Full legal move validation, auto-flipping, and
+                optional timers.
               </Text>
             </View>
 
             <View style={styles.cardFooter}>
               <Text style={styles.footerActionText}>Start Local Match</Text>
-              <ChevronRight size={18} color={themeColors.board.light} />
+              <ChevronRight size={18} color={theme.board.light} />
             </View>
-          </Pressable>
-
-          {/* Card: Online Multiplayer (v2.0) */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.card,
-              pressed && styles.cardPressed,
-              { borderColor: 'rgba(52, 211, 153, 0.4)' },
-            ]}
-            onPress={handlePlayOnline}
-            accessibilityRole="button"
-            accessibilityLabel="Online Multiplayer"
-          >
-            <View style={styles.cardHeader}>
-              <View
-                style={[styles.botIconWrapper, { backgroundColor: 'rgba(52, 211, 153, 0.15)' }]}
-              >
-                <Globe size={24} color="#34d399" />
-              </View>
-              <View
-                style={[styles.settingsTagBadge, { backgroundColor: 'rgba(52, 211, 153, 0.15)' }]}
-              >
-                <Text style={[styles.settingsTagText, { color: '#34d399' }]}>Version 2.0</Text>
-              </View>
-            </View>
-
-            <View style={styles.cardBody}>
-              <Text style={styles.cardTitle}>Online Arena</Text>
-              <Text style={styles.cardDescription}>
-                Challenge friends via shareable 6-digit room codes, play ranked matches, and compete
-                in tournaments.
-              </Text>
-            </View>
-
-            <View style={styles.cardFooter}>
-              <Text style={[styles.footerActionText, { color: '#34d399' }]}>Enter Arena</Text>
-              <ChevronRight size={18} color="#34d399" />
-            </View>
-          </Pressable>
-
-          {/* Card 3: Settings */}
-          <Pressable
-            style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-            onPress={handleOpenSettings}
-            accessibilityRole="button"
-            accessibilityLabel="Game Settings"
-          >
-            <View style={styles.cardHeader}>
-              <View style={styles.settingsIconWrapper}>
-                <Settings size={24} color={themeColors.text.muted} />
-              </View>
-              <View style={styles.settingsTagBadge}>
-                <Text style={styles.settingsTagText}>Engine & Audio</Text>
-              </View>
-            </View>
-
-            <View style={styles.cardBody}>
-              <Text style={styles.cardTitle}>Settings</Text>
-              <Text style={styles.cardDescription}>
-                Select bot difficulty tier, adjust sound cues, and customize board appearance.
-              </Text>
-            </View>
-
-            <View style={styles.cardFooter}>
-              <Text style={styles.footerActionText}>Configure Preferences</Text>
-              <ChevronRight size={18} color={themeColors.text.secondary} />
-            </View>
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         {/* Footer info */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>ET Chess 1.0.0 • Offline First Architecture</Text>
+          <Text style={styles.footerText}>ET Chess 2.0 • Addis Ababa</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: themeColors.surface.base,
-  },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xxxl,
-  },
-  topActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  topActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: themeColors.surface.accent,
-    borderWidth: 1,
-    borderColor: themeColors.surface.border,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
-    borderRadius: borderRadius.md,
-  },
-  topActionButtonPressed: {
-    opacity: 0.8,
-  },
-  topActionText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-  },
-  heroSection: {
-    alignItems: 'center',
-    marginBottom: spacing.xxl,
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: themeColors.surface.card,
-    borderColor: themeColors.surface.border,
-    borderWidth: 1,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.round,
-    marginBottom: spacing.md,
-  },
-  badgeText: {
-    fontSize: typography.badge.fontSize,
-    fontWeight: typography.badge.fontWeight,
-    color: themeColors.board.light,
-  },
-  title: {
-    fontSize: typography.titleLarge.fontSize,
-    fontWeight: typography.titleLarge.fontWeight,
-    color: themeColors.text.primary,
-    letterSpacing: typography.titleLarge.letterSpacing,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontSize: typography.bodyRegular.fontSize,
-    color: themeColors.text.secondary,
-    lineHeight: typography.bodyRegular.lineHeight,
-    textAlign: 'center',
-    maxWidth: 320,
-  },
-  cardContainer: {
-    gap: spacing.lg,
-  },
-  card: {
-    backgroundColor: themeColors.surface.card,
-    borderColor: themeColors.surface.border,
-    borderWidth: 1,
-    borderRadius: borderRadius.xl,
-    padding: spacing.xl,
-  },
-  cardPressed: {
-    borderColor: themeColors.board.dark,
-    backgroundColor: themeColors.surface.accent,
-    opacity: 0.95,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  botIconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    backgroundColor: 'rgba(181, 136, 99, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(181, 136, 99, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  usersIconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    backgroundColor: themeColors.surface.accent,
-    borderWidth: 1,
-    borderColor: themeColors.surface.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settingsIconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.lg,
-    backgroundColor: themeColors.surface.accent,
-    borderWidth: 1,
-    borderColor: themeColors.surface.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tagBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.round,
-    backgroundColor: 'rgba(181, 136, 99, 0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(181, 136, 99, 0.35)',
-  },
-  tagText: {
-    fontSize: typography.bodySmall.fontSize,
-    fontWeight: '600',
-    color: themeColors.board.light,
-  },
-  localTagBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.round,
-    backgroundColor: themeColors.surface.accent,
-    borderWidth: 1,
-    borderColor: themeColors.surface.border,
-  },
-  localTagText: {
-    fontSize: typography.bodySmall.fontSize,
-    fontWeight: '600',
-    color: themeColors.text.secondary,
-  },
-  settingsTagBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.round,
-    backgroundColor: themeColors.surface.accent,
-    borderWidth: 1,
-    borderColor: themeColors.surface.border,
-  },
-  settingsTagText: {
-    fontSize: typography.bodySmall.fontSize,
-    fontWeight: '500',
-    color: themeColors.text.muted,
-  },
-  cardBody: {
-    marginBottom: spacing.lg,
-  },
-  cardTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  cardTitle: {
-    fontSize: typography.titleMedium.fontSize,
-    fontWeight: typography.titleMedium.fontWeight,
-    color: themeColors.text.primary,
-  },
-  levelTag: {
-    backgroundColor: themeColors.surface.accent,
-    borderColor: themeColors.surface.border,
-    borderWidth: 1,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-  },
-  levelTagText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: themeColors.text.secondary,
-  },
-  cardDescription: {
-    fontSize: typography.bodyRegular.fontSize,
-    color: themeColors.text.secondary,
-    lineHeight: typography.bodyRegular.lineHeight,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: themeColors.surface.border,
-  },
-  footerActionText: {
-    fontSize: typography.bodyRegular.fontSize,
-    fontWeight: '600',
-    color: themeColors.text.primary,
-  },
-  footer: {
-    marginTop: spacing.xxl,
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: typography.bodySmall.fontSize,
-    color: themeColors.text.muted,
-  },
-});
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.surface.base,
+    },
+    scrollContent: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.xxxl,
+    },
+    topActionsRow: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: spacing.xs + 2,
+      paddingVertical: spacing.xs,
+      marginBottom: spacing.md,
+    },
+    topActionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      backgroundColor: theme.surface.accent,
+      borderWidth: 1,
+      borderColor: theme.surface.border,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs + 2,
+      borderRadius: borderRadius.md,
+    },
+    topActionButtonPressed: {
+      opacity: 0.8,
+    },
+    topActionText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: theme.text.primary,
+    },
+    heroSection: {
+      alignItems: 'center',
+      marginBottom: spacing.xl,
+    },
+    badgeContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      backgroundColor: theme.surface.card,
+      borderColor: theme.surface.border,
+      borderWidth: 1,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.round,
+      marginBottom: spacing.sm,
+    },
+    badgeText: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: theme.brand.green.DEFAULT,
+    },
+    title: {
+      fontSize: typography.titleLarge.fontSize,
+      fontWeight: '900',
+      color: theme.text.primary,
+      letterSpacing: -0.5,
+      textAlign: 'center',
+    },
+    subtitle: {
+      fontSize: typography.bodyRegular.fontSize,
+      color: theme.text.secondary,
+      lineHeight: typography.bodyRegular.lineHeight,
+      textAlign: 'center',
+      maxWidth: 320,
+      marginTop: 4,
+    },
+    cardContainer: {
+      gap: spacing.md,
+    },
+    card: {
+      backgroundColor: theme.surface.card,
+      borderColor: theme.surface.border,
+      borderWidth: 1,
+      borderRadius: borderRadius.xl,
+      padding: spacing.lg,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    iconWrapper: {
+      width: 44,
+      height: 44,
+      borderRadius: borderRadius.lg,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    onlineIconWrapper: {
+      backgroundColor: 'rgba(7, 137, 48, 0.15)',
+      borderWidth: 1,
+      borderColor: 'rgba(7, 137, 48, 0.3)',
+    },
+    friendIconWrapper: {
+      backgroundColor: 'rgba(252, 221, 9, 0.15)',
+      borderWidth: 1,
+      borderColor: 'rgba(252, 221, 9, 0.3)',
+    },
+    botIconWrapper: {
+      backgroundColor: 'rgba(181, 136, 99, 0.15)',
+      borderWidth: 1,
+      borderColor: 'rgba(181, 136, 99, 0.4)',
+    },
+    localIconWrapper: {
+      backgroundColor: theme.surface.accent,
+      borderWidth: 1,
+      borderColor: theme.surface.border,
+    },
+    tagBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: borderRadius.round,
+      backgroundColor: theme.surface.accent,
+      borderWidth: 1,
+      borderColor: theme.surface.border,
+    },
+    tagText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: theme.text.secondary,
+      textTransform: 'uppercase',
+    },
+    cardBody: {
+      marginBottom: spacing.md,
+    },
+    cardTitle: {
+      fontSize: typography.titleMedium.fontSize,
+      fontWeight: '800',
+      color: theme.text.primary,
+      marginBottom: 2,
+    },
+    cardDescription: {
+      fontSize: typography.bodyRegular.fontSize,
+      color: theme.text.secondary,
+      lineHeight: typography.bodyRegular.lineHeight,
+    },
+    cardFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: spacing.sm + 2,
+      borderTopWidth: 1,
+      borderTopColor: theme.surface.border,
+    },
+    footerActionText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: theme.text.primary,
+    },
+    footer: {
+      marginTop: spacing.xxl,
+      alignItems: 'center',
+    },
+    footerText: {
+      fontSize: 11,
+      color: theme.text.muted,
+    },
+  });

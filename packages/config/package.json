@@ -6,6 +6,18 @@
   "exports": {
     "./tsconfig.base.json": "./tsconfig.base.json",
     "./biome.json": "./biome.json",
-    "./tailwind.preset": "./tailwind.preset.ts"
+    "./tailwind.preset": "./tailwind.preset.ts",
+    "./design-tokens": "./src/design-tokens.ts",
+    "./theme.css": "./theme.css",
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate:css": "node scripts/generate-theme-css.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "vitest": "^3.2.7"
   }
 }
